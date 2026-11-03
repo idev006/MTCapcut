@@ -1,0 +1,10 @@
+.venv/
+workspace/
+models/
+config.toml
+dist/
+__pycache__/
+*.pyc
+*.sqlite3
+*.mp4
+*.wav

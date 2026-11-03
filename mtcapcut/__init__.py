@@ -1,0 +1,1 @@
+"""MTCapcut foundation package."""

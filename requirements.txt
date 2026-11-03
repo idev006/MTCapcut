@@ -1,0 +1,9 @@
+# Direct runtime dependencies. AI HTTP adapters and the async engine bridge use Python 3.14 stdlib.
+# faster-whisper 1.2.1 is incompatible with PyAV 19 (metadata_errors removal).
+av==17.1.0
+faster-whisper==1.2.1
+librosa==1.0.0
+pycapcut==0.0.4
+pyloudnorm==0.2.0
+scenedetect==0.7.2
+soundfile==0.14.0

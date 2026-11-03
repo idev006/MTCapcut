@@ -1,0 +1,83 @@
+schema_version = 2
+
+[paths]
+workspace = "./workspace"
+
+[ffmpeg]
+# Change this path if FFmpeg is installed elsewhere.
+ffprobe = "D:/libs/ffmpeg/bin/ffprobe.exe"
+
+[capcut]
+# Change the Windows user name when necessary.
+apps_root = "C:/Users/YOUR_NAME/AppData/Local/CapCut/Apps"
+
+[runtime]
+max_workers = 2
+
+[ui_bridge]
+poll_interval_ms = 100
+
+[storage]
+journal_mode = "delete"
+
+[security]
+allow_remote_ai = false
+allow_insecure_remote_http = false
+
+[observability]
+log_level = "INFO"
+
+[local_ear]
+enabled = false
+model_size = "small"
+device = "cpu"
+compute_type = "int8"
+language = "th"
+vad_filter = true
+min_confidence = 0.25
+cache_dir = "models/faster-whisper"
+
+[shot_analysis]
+enabled = false
+threshold = 27.0
+min_scene_len_frames = 15
+frames_per_shot = 3
+frame_width = 640
+
+[data_policy]
+require_asset_approval = true
+allowed_external_classifications = ["public_source", "internal_test"]
+max_evidence_bytes = 10000000
+evidence_retention_days = 7
+
+[ai]
+# Enable a provider below, then set its name here.
+# default_provider = "ollama"
+vision_model = "openai/gpt-4o-mini"
+audio_model = "openai/gpt-audio-mini"
+studio_model = "openai/gpt-4.1-mini"
+
+[ai.providers.ollama]
+kind = "local_openai"
+base_url = "http://127.0.0.1:11434/v1"
+model = "qwen3:8b"
+enabled = false
+timeout_seconds = 120
+
+[ai.providers.llama_cpp]
+kind = "local_openai"
+base_url = "http://127.0.0.1:8080/v1"
+model = "local-model"
+enabled = false
+timeout_seconds = 120
+
+[ai.providers.openrouter]
+kind = "openrouter"
+base_url = "https://openrouter.ai/api/v1"
+model = "openai/gpt-4o-mini"
+api_key_env = "OPENROUTER_API_KEY"
+# Optional plaintext alternative for local private tests only.
+api_key = ""
+enabled = false
+timeout_seconds = 120
+app_name = "MTCapcut"
