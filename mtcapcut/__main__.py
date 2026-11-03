@@ -17,6 +17,7 @@ from .preview_renderer import PreviewRenderEngine
 from .ai_provider import create_provider
 from .studio_orchestrator import AutonomousStudioOrchestrator
 from .studio_approval import authorize_private_preview
+from .professional_finishing import ProfessionalFinishingEngine
 
 
 def main() -> None:
@@ -82,6 +83,14 @@ def main() -> None:
     draft.add_argument("plan", type=Path)
     draft.add_argument("output_root", type=Path)
     draft.add_argument("draft_name")
+    professional = commands.add_parser(
+        "create-professional-draft", help="Design finishing with the Studio engine and create a pyCapCut draft",
+    )
+    professional.add_argument("project_id")
+    professional.add_argument("candidate", type=Path)
+    professional.add_argument("output_root", type=Path)
+    professional.add_argument("draft_name")
+    professional.add_argument("finishing_manifest", type=Path)
     args = parser.parse_args()
     config = load_config(args.config, validate_paths=args.command != "doctor")
     if args.command == "doctor":
@@ -168,6 +177,23 @@ def main() -> None:
             authorize_private_preview(understanding, args.candidate)
             result = PreviewRenderEngine(config.ffmpeg).render(load_plan(args.candidate), args.output)
             print(json.dumps(asdict(result), ensure_ascii=False, indent=2, default=str))
+        elif args.command == "create-professional-draft":
+            candidate = authorize_private_preview(understanding, args.candidate)
+            if not config.ai.default_provider:
+                raise ValueError("ai.default_provider is required for professional finishing")
+            settings = config.ai.providers[config.ai.default_provider]
+            if config.ai.studio_model:
+                settings = replace(settings, model=config.ai.studio_model)
+            finishing = ProfessionalFinishingEngine(create_provider(settings)).design(candidate)
+            manifest = args.finishing_manifest.resolve()
+            if manifest.exists():
+                raise FileExistsError(manifest)
+            manifest.parent.mkdir(parents=True, exist_ok=True)
+            manifest.write_text(json.dumps(finishing.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+            output = create_draft(load_plan(args.candidate), args.output_root, args.draft_name, finishing)
+            print(json.dumps({"draft":str(output), "finishing_manifest":str(manifest),
+                              "authorship":finishing.authorship,
+                              "compatibility":"unverified-in-capcut"}, ensure_ascii=False, indent=2))
         else:
             output = create_draft(load_plan(args.plan), args.output_root, args.draft_name)
             print(json.dumps({"draft": str(output), "compatibility": "unverified-in-capcut"}, ensure_ascii=False))

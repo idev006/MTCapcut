@@ -45,6 +45,7 @@
 - Provider-facing objections เปลี่ยนเป็น typed findings แล้ว โดยมี category/severity/evidence/action/owner; deterministic policy แยก private/public blockers และปฏิเสธประโยคประเภท “No explicit objection” ไม่ให้กลายเป็น blocker ปลอม
 - Autonomous run `42dca66f-0e51-43db-bb95-e33767e3f7c2` ผ่าน typed brief/compliance และ private-preview gate; render v7 สำเร็จเป็น H.264/AAC 1920×1080 ระยะเวลา 35.000 วินาที ส่วน publication เป็นการตัดสินใจและความรับผิดชอบของผู้นำไปเผยแพร่ โดยระบบเก็บ rights findings ไว้ประกอบการตัดสินใจ
 - OpenRouter cognition เติม semantic observations ให้ silent proxy อีก 23 shots และภาพกิจกรรมทางการ 4 ภาพ ทำให้ intended visual set มี coverage 24/24 shots และ 5/5 photos; audio gap 10–20 วินาทีตอบ empty observations และถูก fail closed โดยไม่มีข้อมูลปลอมเข้า SSOT
+- Professional Finishing Engine ใช้ OpenRouter เลือก transition/filter/motion/text animation แบบ typed allowlist พร้อม rationale และ pyCapCut materialize เป็น draft `MT_ROAD_REPORT_001_AUTONOMOUS_PRO_V2`; CapCut 9.7 เปิด timeline 35 วินาทีได้และมี transition material 1, effects 3, animation 1 แต่ filter/text-animation บาง resource แสดง `Couldn't download filter` / `Animation loss` จึงต้องเพิ่ม local-safe compatibility profile
 
 รายละเอียด: [CapCut Compatibility Report](./21-capcut-compatibility-report.md)
 และ [Long-form Editorial Model](./22-long-form-editorial-model.md)

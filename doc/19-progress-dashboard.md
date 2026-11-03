@@ -57,6 +57,7 @@
 | Typed Brief + Editorial Findings | PASS (automated slice) | strict brief interpreter, duration/aspect/music/text/scope rules, typed objection policy, engine revision and exhausted-rejection tests |
 | Media Readiness | INTENDED VISUAL SET READY / GLOBAL BLOCKED | OpenRouter added observations for 23 missing proxy shots and 4 official photos; intended proxy now 24/24 shots and photos 5/5, while unused assets and full-song coverage remain incomplete |
 | Autonomous private preview v7 | PASS | run `42dca66f-0e51-43db-bb95-e33767e3f7c2`; candidate-ready, brief PASS, 35s H.264/AAC 1080p; publication requires the responsible person's decision |
+| pyCapCut professional finishing | DRAFT OPEN / RESOURCE COMPATIBILITY PARTIAL | OpenRouter finishing manifest → Swipe Left 0.8s, filters 20–30%, slow push-in, text wipe; draft opens and plays in CapCut 9.7, while downloadable filter/text-animation resources need a local-safe fallback profile |
 
 ## ความเสี่ยง/การตัดสินใจที่รอ
 

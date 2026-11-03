@@ -74,7 +74,7 @@ def load_plan(path: Path) -> TimelinePlan:
             source_path=(path.parent / source).resolve() if source else None,
             source_start_us=int(raw.get("source_start_us", 0)), text=raw.get("text"),
             rationale=raw.get("rationale", ""),
-            element_id=raw.get("element_id"),
+            element_id=raw.get("element_id") or raw.get("segment_id"),
             edit_segment_ids=tuple(raw.get("edit_segment_ids", ())),
         ))
     plan = TimelinePlan(int(document["width"]), int(document["height"]), int(document["fps"]), tuple(segments))
