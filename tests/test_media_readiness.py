@@ -18,6 +18,12 @@ class MediaReadinessTests(unittest.TestCase):
         self.assertEqual(semantic_observation_ids_for_range(observations, "v", 12_000_000, 18_000_000), ())
         self.assertEqual(semantic_observation_ids_for_range(observations, "v", 8_000_000, 9_000_000), ("vision",))
 
+    def test_visual_range_does_not_accept_audio_only_evidence(self):
+        observations = [{"observation_id":"sound", "asset_id":"v", "modality":"sound",
+                         "start_us":0, "end_us":10_000_000}]
+        self.assertEqual(semantic_observation_ids_for_range(
+            observations, "v", 0, 5_000_000, frozenset({"vision", "ocr"})), ())
+
     def test_assessor_reports_unobserved_and_missing_policy(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

@@ -105,6 +105,21 @@ class StudioOrchestratorTests(unittest.TestCase):
                 self.assertEqual(document["authorship"], "autonomous_studio")
                 self.assertEqual(mapping.get_studio_run(result.run_id)["status"], "candidate_ready")
 
+    def test_output_write_failure_keeps_studio_run_failed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "picture.jpg").touch()
+            (root / "brief.txt").touch()
+            (root / "not-a-directory").write_text("occupied", encoding="utf-8")
+            with self._mapping(root) as mapping:
+                orchestrator = AutonomousStudioOrchestrator(
+                    Config(root, root / "ffprobe.exe", root), mapping, ScriptedProvider())
+                with self.assertRaises((FileExistsError, NotADirectoryError)):
+                    orchestrator.run(root / "not-a-directory" / "candidate.json")
+                status = mapping.connection.execute(
+                    "SELECT status FROM studio_runs ORDER BY created_at DESC LIMIT 1").fetchone()[0]
+                self.assertEqual(status, "failed")
+
     def test_invalid_asset_fails_run_and_writes_no_plan(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

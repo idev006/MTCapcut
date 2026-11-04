@@ -4,6 +4,23 @@
 สถานะ: Options — ต้องผ่าน Replenishment และ Pull Criteria ก่อนเข้า Ready  
 Execution SSOT: เอกสารนี้; `08-foundation-implementation-plan.md` เป็น technical reference ไม่ใช่คิวงาน
 
+## Studio pipeline cards — 4 พฤศจิกายน 2026
+
+รายละเอียด diagnosis, DoD และความเสี่ยงอยู่ใน [แผนหกเฟส V22](./37-v22-diagnosis-design-and-delivery-plan.md) ผู้ใช้ยืนยันว่า **ยังไม่ทำปลั๊กอิน**
+
+| ID | Priority / board state | งานและ acceptance |
+|---|---|---|
+| STU-101 | P0 / Validate | แยก explicit on-screen copy ออกจาก production instructions; regression test ผ่าน |
+| STU-102 | P0 / Validate | ตรวจภาพนิ่งซ้ำและช่วงวิดีโอซ้ำหลัง revision ทุกครั้ง; report ผูก candidate |
+| STU-103 | P0 / Validate | payload ceiling ตรวจคำขอจริง, artifact พร้อมก่อน ledger ready, manifest ไม่ค้างเมื่อสร้าง draft ล้ม |
+| STU-104 | P1 / Validate | accepted specialist handoff ถึง Lead Editor; evidence visual ต้องเป็น vision/OCR |
+| STU-105 | P1 / Ready | usage/cost ledger ต่อ stage, scoped snapshot, idempotent checkpoint/retry |
+| STU-106 | P1 / Ready | source visual coverage QC และ fact review ที่แยก unknown/observed |
+| STU-107 | P2 / Options | chapter/sequence bounded planning และ localized render ของ 20+ นาที |
+| STU-108 | P2 / Options | blind human review หลาย brief และ finishing A/B benchmark |
+
+สถานะ Validate หมายถึง implementation/focused tests ผ่าน แต่ยังไม่ปิด card จน acceptance ตามงานจริงครบ
+
 ## Development snapshot — 2 พฤศจิกายน 2026
 
 foundation slice เดินถึง validation แล้ว: `ENG-002` doctor ผ่านบนเครื่องจริง; `ENG-005/006` มี bundle ingest, immutable AssetVersion, current/history queries และ artifact provenance; `ENG-007` มี persisted revision/receipt และ localized change planning; `CMP-001` subset create/open/export ผ่าน CapCut 9.7.0.4153 ด้วย fixture สังเคราะห์ รายละเอียดอยู่ใน [Development Status](./17-development-status.md) และ [Compatibility Report](./21-capcut-compatibility-report.md) Acceptance เต็มของ config, rights, correction workflow, automatic edit application และ compatibility matrix ยังไม่ครบ จึงไม่เหมารวม milestone ว่า Done

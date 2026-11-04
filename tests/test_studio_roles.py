@@ -2,7 +2,7 @@ import json
 import unittest
 
 from mtcapcut.ai_provider import AIProviderSettings, ChatResponse
-from mtcapcut.studio_contracts import StudioSynthesis
+from mtcapcut.studio_contracts import StudioRecommendation, StudioSynthesis
 from mtcapcut.studio_roles import StudioRoleEngine
 from mtcapcut.studio_snapshot import StudioInputSnapshot
 
@@ -46,10 +46,15 @@ class StudioRoleTests(unittest.TestCase):
                               "width": 1920, "height": 1080},
         }, "hash")
         synthesis = StudioSynthesis("direction", "premise", "effect",
-                                    ("opening", "event", "resolution"), (), (), 0.5, ("risk",))
-        result = StudioRoleEngine(provider).create_long_timeline(snapshot, synthesis, (), "song")
+                                    ("opening", "event", "resolution"), ("rec-1",), (), 0.5, ("risk",))
+        recommendation = StudioRecommendation("rec-1", "rhythm_sound", "cut on musical phrases",
+                                              0.8, ("music-proof",), ("avoid monotonous pacing",), ())
+        result = StudioRoleEngine(provider).create_long_timeline(
+            snapshot, synthesis, (recommendation,), "song")
         visuals = [item for item in result["segments"] if item["track"] == "main"]
         self.assertEqual(len(provider.requests), 3)
+        self.assertIn("cut on musical phrases", provider.requests[0].messages[1].content)
+        self.assertIn("premise", provider.requests[0].messages[1].content)
         self.assertEqual(len(visuals), 12)
         self.assertEqual([visuals[index]["start_us"] for index in (0, 4, 8)],
                          [0, 30_000_000, 60_000_000])

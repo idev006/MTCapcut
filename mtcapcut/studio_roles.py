@@ -286,6 +286,16 @@ class StudioRoleEngine:
             allowed_evidence.update(item["observation_id"] for item in selected)
         if not catalog:
             raise ValueError("long-form edit has no observed visual assets")
+        accepted_ids = set(synthesis.accepted_recommendation_ids)
+        editorial_handoff = [{
+            "role": item.role,
+            "recommendation": item.recommendation,
+            "evidence": item.evidence,
+            "risks": item.risks,
+            "objections": [{"finding": objection.finding, "severity": objection.severity.value,
+                            "required_action": objection.required_action}
+                           for objection in item.objections],
+        } for item in recommendations if item.recommendation_id in accepted_ids]
         offset = 0
         output = []
         used_ids = []
@@ -295,6 +305,9 @@ class StudioRoleEngine:
             beat = beats[index % len(beats)] if beats else synthesis.story_beats[index % len(synthesis.story_beats)]
             request_input = {"beat": beat, "sequence_index": index + 1, "sequence_count": count,
                 "duration_us": length, "creative_direction": synthesis.creative_direction,
+                "premise": synthesis.premise, "audience_effect": synthesis.audience_effect,
+                "editorial_handoff": editorial_handoff,
+                "unresolved_objections": synthesis.unresolved_objections,
                 "visual_catalog": catalog, "previous_asset_ids": used_ids[-12:],
                 "used_picture_ids": sorted(used_picture_ids),
                 "used_video_ranges": sorted(used_video_ranges)}
@@ -326,10 +339,12 @@ class StudioRoleEngine:
                         original_asset = next((row for row in catalog
                                                if row["asset_id"] == item["asset_id"]), None)
                         has_range_evidence = bool(original_asset and any(
-                            observation.get("start_us") is None or (
-                                observation.get("end_us") is not None
-                                and observation["start_us"] < item["source_start_us"] + item["duration_us"]
-                                and observation["end_us"] > item["source_start_us"])
+                            observation.get("modality") in {"vision", "ocr"} and (
+                                observation.get("start_us") is None or (
+                                    observation.get("end_us") is not None
+                                    and observation["start_us"] < item["source_start_us"] + item["duration_us"]
+                                    and observation["end_us"] > item["source_start_us"])
+                            )
                             for observation in original_asset["observations"]))
                         if repeated_picture or repeated_video or not has_range_evidence:
                             replacement = self._choose_longform_replacement(

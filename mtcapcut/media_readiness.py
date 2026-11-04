@@ -11,11 +11,12 @@ STRUCTURAL_MODALITIES = frozenset({"shot"})
 
 
 def semantic_observation_ids_for_range(observations: Iterable[dict[str, Any]], asset_id: str,
-                                       start_us: int, end_us: int) -> tuple[str, ...]:
+                                       start_us: int, end_us: int,
+                                       modalities: frozenset[str] = SEMANTIC_MODALITIES) -> tuple[str, ...]:
     """Return semantic evidence overlapping the source range; structural rows never qualify."""
     return tuple(sorted(item["observation_id"] for item in observations
         if item.get("asset_id") == asset_id
-        and item.get("modality") in SEMANTIC_MODALITIES
+        and item.get("modality") in modalities
         and (item.get("start_us") is None or (
             item.get("end_us") is not None and item["start_us"] < end_us and item["end_us"] > start_us
         ))))

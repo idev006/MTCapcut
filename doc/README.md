@@ -4,11 +4,11 @@
 
 ## สถานะเอกสาร
 
-- วันที่ตรวจสอบล่าสุด: 2 พฤศจิกายน 2026
-- สถานะ: Foundation implementation + synthetic CapCut compatibility proof — ยังไม่ใช่ production/world-class certification
+- วันที่ตรวจสอบล่าสุด: 4 พฤศจิกายน 2026
+- สถานะ: Autonomous V22 export ใน CapCut 9.8 ผ่าน แต่พบ editorial defect และยังไม่ใช่ production/world-class certification; ดู [ผลวินิจฉัยหกเฟส](./37-v22-diagnosis-design-and-delivery-plan.md)
 - Environment หลัก: `D:\dev\MTCapcut\.venv`
 - pyCapCut: `0.0.4`
-- CapCut active version: `9.7.0.4153`
+- CapCut รุ่นที่ใช้ export V22: `9.8.0.4189`
 - FFmpeg build: `2025-10-30-git-00c23bafb0`
 
 ## เอกสาร
@@ -39,6 +39,7 @@
 24. [ENG-007 Persisted Localized Change Plan](./24-eng-007-persisted-localized-change-plan.md) — แผน implementation/test สำหรับ revision, receipt และการแก้เฉพาะช่วงแบบ recoverable
 25. [Deployment, UI Bridge and AI Provider Architecture](./25-deployment-ui-bridge-ai-provider-architecture.md) — non-blocking engine contract, provider adapters, batch launch และ config categories
 26. [Windows Batch Usage Guide](./26-windows-batch-usage-guide.md) — วิธีเริ่ม ตรวจระบบ และเรียก engines ด้วย batch files
+27. [V22 Pipeline Diagnosis and Delivery Plan](./37-v22-diagnosis-design-and-delivery-plan.md) — วินิจฉัย 6 เฟส, ตัวเลือก, สถาปัตยกรรม, Kanban DoD, ผลแก้และข้อจำกัด
 
 ## ภาษาที่ใช้ในโครงการ
 

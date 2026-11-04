@@ -2,7 +2,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from mtcapcut.config import AIProviderSettings, Config, SecuritySettings
+from mtcapcut.config import AIProviderSettings, Config, SecuritySettings, DataPolicySettings
 from mtcapcut.data_policy import DataPolicyGate
 from mtcapcut.map import UnderstandingMap
 from mtcapcut.studio_snapshot import authorize_studio_snapshot, build_studio_snapshot
@@ -59,6 +59,23 @@ class StudioSnapshotTests(unittest.TestCase):
                     "producer":"reader","producer_version":"1"}])
                 snapshot = build_studio_snapshot(mapping, {"brief-active"})
                 self.assertEqual(snapshot.asset_ids, {"brief-active"})
+
+    def test_external_snapshot_checks_full_outbound_payload_size(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            with UnderstandingMap(root / "map.sqlite3") as mapping:
+                for asset_id in ("a1", "a2"):
+                    mapping.add_asset({"asset_id":asset_id, "path":asset_id, "kind":"text",
+                        "role":"brief", "source":"user", "rights_status":"owned",
+                        "content_hash":asset_id, "size_bytes":2, "technical":{}})
+                    mapping.set_asset_ai_policy(asset_id, "internal_test", True, "owner", "test")
+                config = Config(root, root / "ffprobe.exe", root,
+                    security=SecuritySettings(allow_remote_ai=True),
+                    data_policy=DataPolicySettings(max_evidence_bytes=250))
+                remote = AIProviderSettings("remote", "local_openai", "https://example.invalid/v1", "model")
+                snapshot = build_studio_snapshot(mapping)
+                with self.assertRaisesRegex(PermissionError, "size limit"):
+                    authorize_studio_snapshot(DataPolicyGate(config, mapping), remote, snapshot)
 
 
 if __name__ == "__main__":

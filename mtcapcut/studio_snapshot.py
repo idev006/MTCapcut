@@ -86,7 +86,8 @@ def build_studio_snapshot(understanding: UnderstandingMap,
 def authorize_studio_snapshot(gate: DataPolicyGate, settings: AIProviderSettings,
                               snapshot: StudioInputSnapshot) -> None:
     encoded_size = len(json.dumps(snapshot.document, ensure_ascii=False).encode("utf-8"))
-    per_asset = max(1, encoded_size // max(1, len(snapshot.asset_ids)))
     for asset_id in sorted(snapshot.asset_ids):
-        gate.authorize(settings, asset_id, per_asset)
+        # Each asset contributes to the same outbound request. Dividing the payload
+        # by asset count could let an oversized request pass the per-send ceiling.
+        gate.authorize(settings, asset_id, max(1, encoded_size))
 

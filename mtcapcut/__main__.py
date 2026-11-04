@@ -3,8 +3,10 @@
 import argparse
 from dataclasses import asdict, replace
 import json
+import os
 from pathlib import Path
 import sys
+from uuid import uuid4
 
 from .assets import InputAsset, inspect_asset, inspect_bundle
 from .config import load_config
@@ -263,8 +265,18 @@ def main() -> None:
             if manifest.exists():
                 raise FileExistsError(manifest)
             manifest.parent.mkdir(parents=True, exist_ok=True)
-            manifest.write_text(json.dumps(finishing.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
-            output = create_draft(load_plan(args.candidate), args.output_root, args.draft_name, finishing)
+            staged_manifest = manifest.with_name(f".{manifest.name}.{uuid4().hex}.tmp")
+            try:
+                with staged_manifest.open("x", encoding="utf-8") as stream:
+                    json.dump(finishing.to_dict(), stream, ensure_ascii=False, indent=2)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                output = create_draft(load_plan(args.candidate), args.output_root, args.draft_name, finishing)
+                if manifest.exists():
+                    raise FileExistsError(manifest)
+                staged_manifest.rename(manifest)
+            finally:
+                staged_manifest.unlink(missing_ok=True)
             print(json.dumps({"draft":str(output), "finishing_manifest":str(manifest),
                               "authorship":finishing.authorship,
                               "compatibility":"unverified-in-capcut"}, ensure_ascii=False, indent=2))

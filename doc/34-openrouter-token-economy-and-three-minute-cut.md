@@ -1,6 +1,6 @@
 # OpenRouter token economy and three-minute cut
 
-Status: engineering checkpoint, 2026-11-04. The three-minute CapCut draft is not yet produced.
+Status: engineering checkpoint, 2026-11-04. V22 later produced a three-minute CapCut draft and local export; see [retest](./36-three-minute-autonomous-retest.md) and [pipeline diagnosis](./37-v22-diagnosis-design-and-delivery-plan.md). The measured baseline below describes the earlier V9–V15 runs.
 
 ## Measured baseline
 

@@ -37,6 +37,22 @@ def brief():
 
 
 class ProjectBriefTests(unittest.TestCase):
+    def test_explicit_titles_exclude_music_production_instruction(self):
+        value = brief().to_dict() | {"required_messages": [
+            "พล.ต.ท. วรวัฒน์ มะลิ", 'ใช้ไฟล์ "โป้ง - หัวใจไม่เคยหยุดทำ1.mp3" เพียงเพลงเดียว']}
+        provider = FakeProvider(json.dumps(value, ensure_ascii=False))
+        snapshot = StudioInputSnapshot({"assets": [{"role": "music", "kind": "audio"}],
+            "observations": [{"observation_id": "brief-o1", "asset_id": "brief",
+                              "modality": "text", "text":
+                              'ข้อความหลัก: พล.ต.ท. วรวัฒน์ มะลิ\n'
+                              'ข้อความหลัก: ใส่ใจประชาชน\n'
+                              'เพลง: ใช้ไฟล์ "โป้ง - หัวใจไม่เคยหยุดทำ1.mp3" เพียงเพลงเดียว'},
+                             {"observation_id": "rule-o1", "asset_id": "rules",
+                              "modality": "text", "text": "private review"}]}, "hash")
+        result = BriefInterpreterEngine(provider).interpret(snapshot)
+        self.assertEqual(result.required_messages,
+                         ("พล.ต.ท. วรวัฒน์ มะลิ", "ใส่ใจประชาชน"))
+
     def test_literal_user_music_lock_survives_provider_omission(self):
         value = brief().to_dict() | {"required_asset_names": []}
         provider = FakeProvider(json.dumps(value, ensure_ascii=False))

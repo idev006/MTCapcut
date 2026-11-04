@@ -2,9 +2,11 @@
 
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 import re
 from typing import Callable
+from uuid import uuid4
 
 from .ai_provider import OpenAICompatibleProvider
 from .config import Config
@@ -15,6 +17,7 @@ from .editorial_findings import compute_release_gates
 from .project_brief import BriefComplianceValidator, BriefInterpreterEngine
 from .studio_contracts import STUDIO_ROLES, StudioRecommendation
 from .studio_roles import PROMPT_VERSION, StudioRoleEngine
+from .studio_quality import validate_longform_diversity
 from .studio_snapshot import authorize_studio_snapshot, build_studio_snapshot
 from .timeline import Segment, TimelinePlan, validate_plan
 
@@ -96,6 +99,8 @@ class AutonomousStudioOrchestrator:
                                      for item in recommendation.objections)
                     candidate = self._validated_candidate(raw_candidate, snapshot.evidence_ids,
                                                           findings, brief.delivery_scope, run_id)
+                    if brief.duration_min_us >= 90_000_000:
+                        candidate["editorial_qc"] = validate_longform_diversity(candidate)
                     asset_catalog = {item["asset_id"]: self.understanding.get_asset(item["asset_id"])
                                      for item in self.understanding.list_assets()}
                     compliance = BriefComplianceValidator().validate(candidate, brief, asset_catalog)
@@ -125,11 +130,25 @@ class AutonomousStudioOrchestrator:
                     )
             if candidate is None:
                 raise RuntimeError("candidate validation did not produce a result")
-            self.understanding.complete_studio_run(run_id, synthesis.to_dict(), candidate)
             output.parent.mkdir(parents=True, exist_ok=True)
-            output.write_text(json.dumps(candidate, ensure_ascii=False, indent=2), encoding="utf-8")
+            staged = output.with_name(f".{output.name}.{uuid4().hex}.tmp")
+            try:
+                with staged.open("x", encoding="utf-8") as stream:
+                    json.dump(candidate, stream, ensure_ascii=False, indent=2)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                if output.exists():
+                    raise FileExistsError(output)
+                staged.rename(output)
+            finally:
+                staged.unlink(missing_ok=True)
+            # A ready ledger entry is published only after the artifact is durable.
+            self.understanding.complete_studio_run(run_id, synthesis.to_dict(), candidate)
         except Exception as error:
-            self.understanding.fail_studio_run(run_id, f"{type(error).__name__}: {error}")
+            try:
+                self.understanding.fail_studio_run(run_id, f"{type(error).__name__}: {error}")
+            except Exception as ledger_error:
+                error.add_note(f"studio failure ledger update also failed: {ledger_error}")
             raise
         return StudioRunResult(
             run_id, output, "candidate_ready", len(recommendations), synthesis.unresolved_objections,
@@ -183,6 +202,8 @@ class AutonomousStudioOrchestrator:
                 source_end_us = source_start_us + raw["duration_us"]
                 matching = semantic_observation_ids_for_range(
                     observation_index.values(), asset_id, source_start_us, source_end_us,
+                    frozenset({"vision", "ocr"}) if kind in {"picture", "video"}
+                    else frozenset({"speech", "sound", "music"}),
                 )
                 if not matching:
                     raise ValueError("timeline media source range has no machine observation")

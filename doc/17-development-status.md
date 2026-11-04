@@ -1,7 +1,7 @@
 # Development Status
 
 วันที่: 4 พฤศจิกายน 2026
-สถานะ: Foundation และ CapCut compatibility slice ทำงานได้; ร่าง autonomous 3 นาทีเปิดใน CapCut 9.8 ได้ แต่ยังไม่ผ่านการประเมินคุณภาพสร้างสรรค์ ดู [ผลทดสอบ 3 นาที](./36-three-minute-autonomous-retest.md)
+สถานะ: Foundation และ CapCut compatibility slice ทำงานได้; autonomous V22 export จาก CapCut 9.8 ได้ แต่มีข้อบกพร่องเชิงบรรณาธิการและยังไม่ผ่านการประเมินคุณภาพสร้างสรรค์ ดู [ผลทดสอบ 3 นาที](./36-three-minute-autonomous-retest.md) และ [วินิจฉัยหกเฟส](./37-v22-diagnosis-design-and-delivery-plan.md)
 
 ## ใช้งานได้แล้ว
 
@@ -29,7 +29,7 @@
 
 ## หลักฐานทดสอบล่าสุด
 
-- Automated tests: `118 tests, 0 failures` (4 November 2026)
+- Automated tests: `125 tests, 0 failures` (4 November 2026; full suite after pipeline fixes)
 - Windows batch: `doctor.bat` และ `run-tests.bat` ผ่าน; `start.bat` เป็นเมนูเรียก engines โดยไม่ติดตั้งหรือแก้ environment
 - Editorial persistence/change planning: `11 tests, 0 failures` ครอบคลุม immutability, retry idempotency, rollback, metadata/payload tamper detection, backup/reopen, provenance requirements, no-op rejection และ scope นาที 12–13
 - `doctor`: PASS บน Python 3.14.0, pyCapCut 0.0.4, FFmpeg/ffprobe build `2025-10-30`, CapCut 9.6 และ 9.7 ถูกค้นพบ
@@ -46,7 +46,7 @@
 - Autonomous run `42dca66f-0e51-43db-bb95-e33767e3f7c2` ผ่าน typed brief/compliance และ private-preview gate; render v7 สำเร็จเป็น H.264/AAC 1920×1080 ระยะเวลา 35.000 วินาที ส่วน publication เป็นการตัดสินใจและความรับผิดชอบของผู้นำไปเผยแพร่ โดยระบบเก็บ rights findings ไว้ประกอบการตัดสินใจ
 - OpenRouter cognition เติม semantic observations ให้ silent proxy อีก 23 shots และภาพกิจกรรมทางการ 4 ภาพ ทำให้ intended visual set มี coverage 24/24 shots และ 5/5 photos; audio gap 10–20 วินาทีตอบ empty observations และถูก fail closed โดยไม่มีข้อมูลปลอมเข้า SSOT
 - Professional Finishing Engine ใช้ OpenRouter เลือก transition/filter/motion/text animation แบบ typed allowlist พร้อม rationale และ pyCapCut materialize เป็น draft `MT_ROAD_REPORT_001_AUTONOMOUS_PRO_V2`; CapCut 9.7 เปิด timeline 35 วินาทีได้และมี transition material 1, effects 3, animation 1 แต่ filter/text-animation บาง resource แสดง `Couldn't download filter` / `Animation loss` จึงต้องเพิ่ม local-safe compatibility profile
-- งานรอบ 3 นาที: ภาพ event_photo 57 ภาพถูก ingest และวิเคราะห์ผ่าน OpenRouter Vision ลง SSOT แล้ว; brief ใหม่กำหนด 170–190 วินาที แต่ Studio Council V9–V15 ยังไม่ผ่าน brief compliance (V15 ได้เพียง 72 วินาทีและขาดข้อความหลัก) จึงยังไม่มี draft รอบ 3 นาที ขนาด snapshot JSON 137,204 bytes เป็นสัญญาณว่าต้องแบ่ง context/sequence ตาม doc/34
+- งานรอบ 3 นาที: ภาพ event_photo 57 ภาพถูก ingest และวิเคราะห์ผ่าน OpenRouter Vision ลง SSOT แล้ว; V22 สร้าง draft และ CapCut 9.8 export 180 วินาทีได้ แต่มี title คำสั่งเพลงที่ผิดเจตนา ขนาด snapshot JSON ราว 137 KB เป็นสัญญาณว่าต้องแบ่ง context/sequence และวัด token/cost ตาม doc/34 และ doc/37
 
 รายละเอียด: [CapCut Compatibility Report](./21-capcut-compatibility-report.md)
 และ [Long-form Editorial Model](./22-long-form-editorial-model.md)

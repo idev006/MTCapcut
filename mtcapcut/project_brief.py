@@ -139,6 +139,15 @@ class BriefInterpreterEngine:
                     if music_name not in brief.required_asset_names:
                         brief = replace(brief, required_asset_names=(*brief.required_asset_names,
                                                                       music_name))
+                # Explicit on-screen copy is a user lock. A model must not promote
+                # production instructions (for example, the music rule) into titles.
+                literal_messages = tuple(dict.fromkeys(
+                    match.strip() for match in re.findall(
+                        r'^(?:ข้อความหลัก|ข้อความบนจอ|on-screen text|title)\s*:\s*(.+)$',
+                        authority_text, flags=re.IGNORECASE | re.MULTILINE)
+                    if match.strip()))
+                if literal_messages:
+                    brief = replace(brief, required_messages=literal_messages)
                 return brief
             except (json.JSONDecodeError, ValueError) as error:
                 if attempt == 2:
