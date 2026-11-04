@@ -1,6 +1,6 @@
 # Professional Finishing and pyCapCut Integration
 
-วันที่: 3 พฤศจิกายน 2026
+วันที่: 4 พฤศจิกายน 2026
 
 ## Outcome
 
@@ -8,8 +8,7 @@
 
 ## Contract v1
 
-- Transitions: `Flash`, `Light_Leaks`, `Swipe_Left`, `Zoom_Transition` หรือ `none`
-- Filters: `Enhance`, `Cinematic_Dusk`, `Soft_Light`, `Vivid` หรือ `none`
+- New OpenRouter finishing: transitions `Mix`, `Overlay` หรือ `none`; filters `Soft_Grain`, `BW_2` หรือ `none`. Pinned pyCapCut 0.0.4 marks these resources `is_vip=false`. Older plans remain readable but a new plan cannot select a Pro resource.
 - Motion: `locked`, `slow_push_in`, `slow_pull_out`
 - Text animation: restrained intro/outro allowlist
 - Multi-visual plan ต้องมี intentional transition อย่างน้อยหนึ่งจุดเพื่อให้ review transition craft ได้
@@ -34,4 +33,4 @@ CapCut แสดง `Couldn't download filter` และ `Animation loss` สำ
 - Filter and text-animation resource availability: PARTIAL
 - Creative quality review: รอ feedback จากผู้ใช้
 
-ขั้นถัดไปคือ `local-safe finishing profile` ที่ใช้เฉพาะ transition/keyframes/basic transforms ซึ่งไม่ต้องดาวน์โหลด resource และ compatibility matrix ของ CapCut 9.7 ต่อ effect ID
+CapCut 9.8 เปิดร่าง V16 ความยาว 3 นาทีได้ แต่ Export แจ้งว่า `Swipe Left` เป็น Pro material ตาม [คำอธิบายของ CapCut](https://www.capcut.com/help/join-capcut-pro-for-exporting). จึงเปลี่ยน allowlist ของงานใหม่เป็นวัสดุที่ metadata ระบุว่าใช้ฟรี และตั้ง text animation เป็น `none` สำหรับงานยาว การเปิดและ export ร่างใหม่ยังต้องทดสอบจริง เพราะวัสดุฟรีอาจต้องดาวน์โหลดใน CapCut.

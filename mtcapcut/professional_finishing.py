@@ -7,8 +7,10 @@ from typing import Any
 from .ai_provider import ChatMessage, ChatRequest, OpenAICompatibleProvider
 
 
-TRANSITIONS = ("none", "Flash", "Light_Leaks", "Swipe_Left", "Zoom_Transition")
-FILTERS = ("none", "Enhance", "Cinematic_Dusk", "Soft_Light", "Vivid")
+TRANSITIONS = ("none", "Mix", "Overlay", "Flash", "Light_Leaks", "Swipe_Left", "Zoom_Transition")
+FILTERS = ("none", "Soft_Grain", "BW_2", "Enhance", "Cinematic_Dusk", "Soft_Light", "Vivid")
+LOCAL_SAFE_TRANSITIONS = ("none", "Mix", "Overlay")
+LOCAL_SAFE_FILTERS = ("none", "Soft_Grain", "BW_2")
 MOTIONS = ("locked", "slow_push_in", "slow_pull_out")
 TEXT_INTROS = ("none", "Wiping_In", "Golden_Dust", "Slanted_Expand")
 TEXT_OUTROS = ("none", "Wiping_Out")
@@ -108,9 +110,9 @@ class ProfessionalFinishingPlan:
 
 def _response_format() -> dict[str, Any]:
     visual = {"type":"object","additionalProperties":False,"properties":{
-        "segment_id":{"type":"string"}, "transition":{"type":"string","enum":list(TRANSITIONS)},
+        "segment_id":{"type":"string"}, "transition":{"type":"string","enum":list(LOCAL_SAFE_TRANSITIONS)},
         "transition_duration_us":{"type":"integer","minimum":0,"maximum":800000},
-        "filter":{"type":"string","enum":list(FILTERS)},
+        "filter":{"type":"string","enum":list(LOCAL_SAFE_FILTERS)},
         "filter_intensity":{"type":"number","minimum":0,"maximum":45},
         "motion":{"type":"string","enum":list(MOTIONS)}, "rationale":{"type":"string"}},
         "required":["segment_id","transition","transition_duration_us","filter","filter_intensity","motion","rationale"]}
@@ -139,7 +141,7 @@ class ProfessionalFinishingEngine:
             ChatMessage("system", "You are MTCapcut Senior Finishing Editor. Design restrained, intentional professional finishing for a factual leadership profile. When there are two or more visual segments, use at least one non-none transition on a non-final visual so the review demonstrates transition craft, but use transitions sparingly. Filter intensity is a percentage: use 10-45 for a selected filter and exactly 0 for none. Avoid novelty effects, use motion only where it supports dignity, and give a concrete rationale for every decision. Do not change edit timing, facts, text, assets, or music. Return strict JSON only."),
             ChatMessage("user", json.dumps({"segments":safe_segments,
                 "creative_direction":candidate.get("project_brief"),
-                "allowed_transitions":TRANSITIONS,"allowed_filters":FILTERS,
+                "allowed_transitions":LOCAL_SAFE_TRANSITIONS,"allowed_filters":LOCAL_SAFE_FILTERS,
                 "allowed_motion":MOTIONS,"allowed_text_intros":TEXT_INTROS,
                 "allowed_text_outros":TEXT_OUTROS}, ensure_ascii=False, sort_keys=True)),
         ), temperature=0.15, max_tokens=3000, response_format=_response_format()))
@@ -149,7 +151,13 @@ class ProfessionalFinishingEngine:
                 value = json.loads(candidate_text)
                 if not isinstance(value, dict):
                     raise ValueError("professional finishing response must be an object")
-                return ProfessionalFinishingPlan.from_dict(value, candidate)
+                if not any(item["kind"] == "text" for item in candidate["segments"]):
+                    value["text_finishes"] = []
+                plan = ProfessionalFinishingPlan.from_dict(value, candidate)
+                if any(item.transition not in LOCAL_SAFE_TRANSITIONS or item.filter not in LOCAL_SAFE_FILTERS
+                       for item in plan.visual_finishes):
+                    raise ValueError("professional finishing selected a CapCut Pro material")
+                return plan
             except (json.JSONDecodeError, ValueError) as error:
                 if attempt == 2:
                     if isinstance(error, json.JSONDecodeError):

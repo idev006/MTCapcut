@@ -125,7 +125,21 @@ class BriefInterpreterEngine:
                 authority_ids = {item["observation_id"] for item in authority}
                 asset_roles = {item["role"] for item in snapshot.document["assets"]
                                if item["kind"] != "text"}
-                return ProjectBrief.from_dict(value, authority_ids, asset_roles)
+                brief = ProjectBrief.from_dict(value, authority_ids, asset_roles)
+                # Preserve an explicit quoted music-file lock even if the provider omits it.
+                # This extracts only the user's literal filename; it makes no creative choice.
+                authority_text = "\n".join(item["text"] for item in authority)
+                literal_music = set(re.findall(
+                    r'(?:เพลง|music)\s*:\s*(?:ใช้ไฟล์|use\s+(?:the\s+)?file)\s*["“]([^"”]+)["”]',
+                    authority_text, flags=re.IGNORECASE))
+                if len(literal_music) == 1:
+                    music_name = next(iter(literal_music))
+                    if music_name in brief.forbidden_asset_names:
+                        raise ValueError("required music conflicts with forbidden assets")
+                    if music_name not in brief.required_asset_names:
+                        brief = replace(brief, required_asset_names=(*brief.required_asset_names,
+                                                                      music_name))
+                return brief
             except (json.JSONDecodeError, ValueError) as error:
                 if attempt == 2:
                     if isinstance(error, json.JSONDecodeError):

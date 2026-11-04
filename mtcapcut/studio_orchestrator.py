@@ -76,7 +76,16 @@ class AutonomousStudioOrchestrator:
             synthesis = engine.synthesize(snapshot, tuple(recommendations))
             if self.progress:
                 self.progress("lead_editor", total, total)
-            raw_candidate = engine.create_timeline(snapshot, synthesis, tuple(recommendations))
+            if brief.duration_min_us >= 90_000_000:
+                named_music = [item for item in self.understanding.list_assets()
+                               if item["kind"] == "audio"
+                               and Path(item["path"]).name in brief.required_asset_names]
+                if len(named_music) != 1:
+                    raise ValueError("long-form brief must identify exactly one registered required music asset")
+                raw_candidate = engine.create_long_timeline(
+                    snapshot, synthesis, tuple(recommendations), named_music[0]["asset_id"])
+            else:
+                raw_candidate = engine.create_timeline(snapshot, synthesis, tuple(recommendations))
             candidate = None
             # Long-form plans can require several provider-authored semantic repairs (runtime,
             # exact copy, source ranges) while every revision remains behind the same validators.

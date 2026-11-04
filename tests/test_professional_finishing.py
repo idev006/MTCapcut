@@ -26,21 +26,33 @@ def candidate():
 
 
 class ProfessionalFinishingTests(unittest.TestCase):
+    def test_pro_material_is_rejected_for_new_finishing(self):
+        value = {"schema":"mtcapcut.finishing.v1","authorship":"autonomous_studio",
+                 "visual_finishes":[
+                    {"segment_id":"v1","transition":"Swipe_Left","transition_duration_us":400000,
+                     "filter":"none","filter_intensity":0,"motion":"locked","rationale":"slide"},
+                    {"segment_id":"v2","transition":"none","transition_duration_us":0,
+                     "filter":"none","filter_intensity":0,"motion":"locked","rationale":"hold"}],
+                 "text_finishes":[{"segment_id":"t1","intro":"none","outro":"none",
+                                   "rationale":"static"}], "creative_rationale":"formal"}
+        with self.assertRaisesRegex(ValueError, "CapCut Pro material"):
+            ProfessionalFinishingEngine(FakeProvider(value)).design(candidate())
+
     def test_provider_authored_finishing_is_strict_and_covers_every_segment(self):
         value = {"schema":"mtcapcut.finishing.v1","authorship":"autonomous_studio",
                  "visual_finishes":[
-                    {"segment_id":"v1","transition":"Light_Leaks","transition_duration_us":400000,
-                     "filter":"Cinematic_Dusk","filter_intensity":25,"motion":"slow_push_in",
+                    {"segment_id":"v1","transition":"Mix","transition_duration_us":400000,
+                     "filter":"Soft_Grain","filter_intensity":25,"motion":"slow_push_in",
                      "rationale":"restrained opening"},
                     {"segment_id":"v2","transition":"none","transition_duration_us":0,
-                     "filter":"Enhance","filter_intensity":18,"motion":"locked",
+                     "filter":"none","filter_intensity":0,"motion":"locked",
                      "rationale":"preserve documentary movement"}],
                  "text_finishes":[{"segment_id":"t1","intro":"Wiping_In","outro":"Wiping_Out",
                                     "rationale":"clear hierarchy"}],
                  "creative_rationale":"formal and restrained"}
         result = ProfessionalFinishingEngine(FakeProvider(value)).design(candidate())
         self.assertEqual(result.authorship, "autonomous_studio")
-        self.assertEqual(result.visual_finishes[0].transition, "Light_Leaks")
+        self.assertEqual(result.visual_finishes[0].transition, "Mix")
 
     def test_unknown_segment_or_excessive_transition_fails_closed(self):
         value = {"schema":"mtcapcut.finishing.v1","authorship":"autonomous_studio",

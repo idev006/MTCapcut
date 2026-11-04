@@ -17,7 +17,7 @@ from .preview_renderer import PreviewRenderEngine
 from .ai_provider import create_provider
 from .studio_orchestrator import AutonomousStudioOrchestrator
 from .studio_approval import authorize_private_preview
-from .professional_finishing import ProfessionalFinishingEngine
+from .professional_finishing import ProfessionalFinishingEngine, ProfessionalFinishingPlan, TextFinish
 from .data_policy import DataPolicyGate
 from .media_cognition import MediaCognitionEngine
 from .perception import EvidenceArtifact, hash_file
@@ -238,7 +238,27 @@ def main() -> None:
             settings = config.ai.providers[config.ai.default_provider]
             if config.ai.studio_model:
                 settings = replace(settings, model=config.ai.studio_model)
-            finishing = ProfessionalFinishingEngine(create_provider(settings)).design(candidate)
+            finishing_engine = ProfessionalFinishingEngine(create_provider(settings))
+            visual_count = sum(item["kind"] in {"picture", "video"} for item in candidate["segments"])
+            if visual_count > 12:
+                chunks = []
+                for offset in range(0, max(item["start_us"] for item in candidate["segments"]
+                                           if item["kind"] in {"picture", "video"}) + 1, 30_000_000):
+                    scoped = {**candidate, "segments": [item for item in candidate["segments"]
+                              if offset <= item["start_us"] < offset + 30_000_000
+                              and item["kind"] in {"picture", "video"}]}
+                    if scoped["segments"]:
+                        chunks.append(finishing_engine.design(scoped))
+                finishing = ProfessionalFinishingPlan(
+                    "mtcapcut.finishing.v1", "autonomous_studio",
+                    tuple(item for chunk in chunks for item in chunk.visual_finishes),
+                    tuple(TextFinish(item["segment_id"], "none", "none",
+                                     "CapCut 9.7 local-safe text treatment")
+                          for item in candidate["segments"] if item["kind"] == "text"),
+                    " | ".join(chunk.creative_rationale for chunk in chunks),
+                )
+            else:
+                finishing = finishing_engine.design(candidate)
             manifest = args.finishing_manifest.resolve()
             if manifest.exists():
                 raise FileExistsError(manifest)

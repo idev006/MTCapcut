@@ -73,7 +73,9 @@ def create_draft(plan: TimelinePlan, output_root: Path, draft_name: str, finishi
                     segment.add_keyframe(cc.KeyframeProperty.uniform_scale,
                                          max(1, visual.duration_us - 1), end_scale)
                 if finish.transition != "none" and visual_index < len(visuals) - 1:
-                    segment.add_transition(getattr(cc.TransitionType, finish.transition),
+                    local_transition = {"Mix": "叠化", "Overlay": "转场_叠加"}.get(
+                        finish.transition, finish.transition)
+                    segment.add_transition(getattr(cc.TransitionType, local_transition),
                                            duration=finish.transition_duration_us)
             script.add_segment(segment, visual_track)
         for track in sorted({s.track for s in plan.segments if s.kind == "audio"}):

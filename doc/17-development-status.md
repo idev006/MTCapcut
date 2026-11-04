@@ -1,7 +1,7 @@
 # Development Status
 
-วันที่: 3 พฤศจิกายน 2026  
-สถานะ: Foundation และ CapCut compatibility slice ทำงานได้; ยังไม่ใช่ world-class production release
+วันที่: 4 พฤศจิกายน 2026
+สถานะ: Foundation และ CapCut compatibility slice ทำงานได้; ร่าง autonomous 3 นาทีเปิดใน CapCut 9.8 ได้ แต่ยังไม่ผ่านการประเมินคุณภาพสร้างสรรค์ ดู [ผลทดสอบ 3 นาที](./36-three-minute-autonomous-retest.md)
 
 ## ใช้งานได้แล้ว
 
@@ -29,7 +29,7 @@
 
 ## หลักฐานทดสอบล่าสุด
 
-- Automated tests: `103 tests, 0 failures`
+- Automated tests: `118 tests, 0 failures` (4 November 2026)
 - Windows batch: `doctor.bat` และ `run-tests.bat` ผ่าน; `start.bat` เป็นเมนูเรียก engines โดยไม่ติดตั้งหรือแก้ environment
 - Editorial persistence/change planning: `11 tests, 0 failures` ครอบคลุม immutability, retry idempotency, rollback, metadata/payload tamper detection, backup/reopen, provenance requirements, no-op rejection และ scope นาที 12–13
 - `doctor`: PASS บน Python 3.14.0, pyCapCut 0.0.4, FFmpeg/ffprobe build `2025-10-30`, CapCut 9.6 และ 9.7 ถูกค้นพบ
