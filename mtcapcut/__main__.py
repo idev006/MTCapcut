@@ -18,6 +18,9 @@ from .ai_provider import create_provider
 from .studio_orchestrator import AutonomousStudioOrchestrator
 from .studio_approval import authorize_private_preview
 from .professional_finishing import ProfessionalFinishingEngine
+from .data_policy import DataPolicyGate
+from .media_cognition import MediaCognitionEngine
+from .perception import EvidenceArtifact, hash_file
 
 
 def main() -> None:
@@ -37,6 +40,12 @@ def main() -> None:
     bundle = commands.add_parser("ingest-bundle", help="Inspect and register a JSON asset bundle atomically")
     bundle.add_argument("project_id")
     bundle.add_argument("manifest", type=Path)
+    directory = commands.add_parser("ingest-directory", help="Inspect and register supported files in a directory")
+    directory.add_argument("project_id")
+    directory.add_argument("directory", type=Path)
+    directory.add_argument("--role", required=True)
+    directory.add_argument("--source", default="user")
+    directory.add_argument("--rights-status", default="unknown")
     assets = commands.add_parser("assets", help="List registered assets and current hashes")
     assets.add_argument("project_id")
     timeline = commands.add_parser("timeline", help="Show observations for one asset")
@@ -55,6 +64,11 @@ def main() -> None:
     show_policy = commands.add_parser("show-ai-policy", help="Show the current append-only AI policy for an asset")
     show_policy.add_argument("project_id")
     show_policy.add_argument("asset_id")
+    cognition = commands.add_parser(
+        "cognize-pictures", help="Use the configured vision AI to understand registered pictures",
+    )
+    cognition.add_argument("project_id")
+    cognition.add_argument("--role")
     render = commands.add_parser("render-preview", help="Render a review MP4 from a validated Timeline Plan")
     render.add_argument("project_id")
     render.add_argument("plan", type=Path)
@@ -125,6 +139,17 @@ def main() -> None:
                         "text": Path(asset["path"]).read_text(encoding="utf-8-sig"),
                         "producer": "text-reader", "producer_version": "1"}])
             print(json.dumps(results, ensure_ascii=False, indent=2))
+        elif args.command == "ingest-directory":
+            root = args.directory.resolve(strict=True)
+            if not root.is_dir():
+                parser.error("directory must identify a directory")
+            inputs = [InputAsset(path=item, role=args.role, source=args.source,
+                                 rights_status=args.rights_status)
+                      for item in sorted(root.iterdir()) if item.is_file()]
+            inspected = inspect_bundle(inputs, config)
+            results = understanding.register_bundle(inspected)
+            print(json.dumps([{**result, "path": asset["path"], "kind": asset["kind"]}
+                              for asset, result in zip(inspected, results)], ensure_ascii=False, indent=2))
         elif args.command == "assets":
             print(json.dumps(understanding.list_assets(), ensure_ascii=False, indent=2))
         elif args.command == "timeline":
@@ -145,6 +170,35 @@ def main() -> None:
             print(json.dumps({"asset_id": args.asset_id,
                               "current": understanding.current_asset_ai_policy(args.asset_id)},
                              ensure_ascii=False, indent=2))
+        elif args.command == "cognize-pictures":
+            if not config.ai.default_provider:
+                raise ValueError("ai.default_provider is required for picture cognition")
+            settings = config.ai.providers[config.ai.default_provider]
+            if config.ai.vision_model:
+                settings = replace(settings, model=config.ai.vision_model)
+            engine = MediaCognitionEngine(
+                create_provider(settings), policy_gate=DataPolicyGate(config, understanding),
+                max_evidence_bytes=config.data_policy.max_evidence_bytes,
+            )
+            results = []
+            for summary in understanding.list_assets():
+                if summary["kind"] != "picture" or (args.role and summary["role"] != args.role):
+                    continue
+                existing = [item for item in understanding.current_asset_timeline(summary["asset_id"])
+                            if item["modality"] in {"vision", "ocr"}
+                            and item["producer"].startswith("media-cognition:")]
+                if existing:
+                    results.append({"asset_id": summary["asset_id"], "status": "cache_hit",
+                                    "observation_ids": [item["observation_id"] for item in existing]})
+                    continue
+                path = Path(summary["path"]).resolve(strict=True)
+                artifact = EvidenceArtifact("frame", 0, 0, path, hash_file(path))
+                ids = engine.analyze_and_store(understanding, summary["asset_id"], artifact)
+                results.append({"asset_id": summary["asset_id"], "status": "analyzed",
+                                "observation_ids": ids})
+            if not results:
+                raise ValueError("no registered pictures matched the requested role")
+            print(json.dumps(results, ensure_ascii=False, indent=2))
         elif args.command == "render-preview":
             preview_document = json.loads(args.plan.resolve(strict=True).read_text(encoding="utf-8-sig"))
             if preview_document.get("authorship") == "autonomous_studio":

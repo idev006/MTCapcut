@@ -65,7 +65,10 @@ class MediaCognitionEngine:
             media = {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{encoded}"}}
             task = (
                 "Analyze the supplied frame itself. Report concrete visible people, objects, actions, "
-                "setting and exact OCR text. Omit categories that are not observable."
+                "setting and exact OCR text. Also report observable editorial fitness: sharpness, exposure, "
+                "subject scale, obstruction, framing, composition and whether the frame offers useful negative "
+                "space for titles. Describe defects concretely; do not use vague praise such as beautiful or "
+                "cinematic. Omit categories that are not observable."
             )
             start_us, end_us = artifact.source_start_us, artifact.source_start_us + 1
         else:
@@ -79,7 +82,7 @@ class MediaCognitionEngine:
                 "tempo, vocals and mood. Omit categories that are not audible."
             )
             start_us, end_us = artifact.source_start_us, artifact.source_end_us
-        response = self.provider.complete(ChatRequest(messages=(
+        request = ChatRequest(messages=(
             ChatMessage("system", (
                 "You are a media evidence analyzer. Return JSON only as "
                 "{\"observations\":[{\"modality\":\"vision|ocr|speech|sound|music\","
@@ -89,7 +92,17 @@ class MediaCognitionEngine:
                 "cannot be analyzed, return {\"observations\":[]}."
             )),
             ChatMessage("user", [{"type": "text", "text": task}, media]),
-        ), temperature=0.0))
+        ), temperature=0.0)
+        response = None
+        for attempt in range(3):
+            try:
+                response = self.provider.complete(request)
+                break
+            except (ConnectionError, TimeoutError):
+                if attempt == 2:
+                    raise
+        if response is None:
+            raise RuntimeError("media cognition transport retry loop ended unexpectedly")
         return self._validated(response.text, start_us, end_us)
 
     def analyze_and_store(self, understanding: UnderstandingMap, asset_id: str,

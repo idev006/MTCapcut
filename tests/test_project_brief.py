@@ -17,6 +17,14 @@ class FakeProvider:
         return ChatResponse("id", "model", self.response)
 
 
+class LengthThenValidProvider(FakeProvider):
+    def complete(self, request):
+        self.requests.append(request)
+        if len(self.requests) == 1:
+            return ChatResponse("id", "model", "{", finish_reason="length")
+        return ChatResponse("id", "model", self.response, finish_reason="stop")
+
+
 def brief():
     return ProjectBrief(
         schema_version="1", duration_min_us=30_000_000, duration_max_us=35_000_000,
@@ -29,6 +37,17 @@ def brief():
 
 
 class ProjectBriefTests(unittest.TestCase):
+    def test_interpreter_retries_a_truncated_provider_response(self):
+        value = brief().to_dict()
+        provider = LengthThenValidProvider(json.dumps(value, ensure_ascii=False))
+        snapshot = StudioInputSnapshot({"assets": [{"role": "music", "kind": "audio"}], "observations": [
+            {"observation_id": "brief-o1", "asset_id": "brief", "modality": "text", "text": "brief"},
+            {"observation_id": "rule-o1", "asset_id": "rules", "modality": "text", "text": "rules"},
+        ], "authority_rules": {}}, "hash")
+        result = BriefInterpreterEngine(provider).interpret(snapshot)
+        self.assertEqual(result.duration_max_us, 35_000_000)
+        self.assertEqual(provider.requests[1].max_tokens, 9600)
+
     def test_interpreter_requires_known_authority_evidence(self):
         value = brief().to_dict() | {"evidence": ["unknown"]}
         provider = FakeProvider(json.dumps(value, ensure_ascii=False))
@@ -37,6 +56,13 @@ class ProjectBriefTests(unittest.TestCase):
         }], "authority_rules": {}}, "hash")
         with self.assertRaises(ValueError):
             BriefInterpreterEngine(provider).interpret(snapshot)
+
+    def test_brief_rejects_descriptive_quality_as_an_asset_role(self):
+        value = json.loads(json.dumps(brief().to_dict(), ensure_ascii=False)) | {
+            "required_asset_roles": ["ภาพคมชัด"]
+        }
+        with self.assertRaisesRegex(ValueError, "unknown required asset roles"):
+            ProjectBrief.from_dict(value, {"brief-o1", "rule-o1"}, {"event_photo", "music"})
 
     def test_45_seconds_fails_30_to_35_second_brief(self):
         candidate = {"width": 1920, "height": 1080, "segments": [

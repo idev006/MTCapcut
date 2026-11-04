@@ -24,6 +24,16 @@ class StudioContractTests(unittest.TestCase):
         result = parse_recommendation(json.dumps(value), "story_architect", {"obs-1"})
         self.assertEqual(result.role, "story_architect")
 
+    def test_hallucinated_evidence_is_pruned_when_real_anchor_remains(self):
+        value = {"role":"story_architect","recommendation":"Use evidence","confidence":0.5,
+                 "evidence":["invented", "obs-1"],"risks":["risk"],"alternatives":["alternative"],
+                 "objections":[]}
+        result = parse_recommendation(json.dumps(value), "story_architect", {"obs-1"})
+        self.assertEqual(result.evidence, ("obs-1",))
+        value["evidence"] = ["invented"]
+        with self.assertRaisesRegex(ValueError, "no known evidence"):
+            parse_recommendation(json.dumps(value), "story_architect", {"obs-1"})
+
     def test_typed_rights_objection_blocks_publication_only(self):
         value = {"role":"fact_ethics_critic","recommendation":"Use only cleared media","confidence":0.8,
                  "evidence":["obs-1"],"risks":["rights"],"alternatives":["omit"],"objections":[{
@@ -31,6 +41,14 @@ class StudioContractTests(unittest.TestCase):
                     "evidence":["obs-1"],"required_action":"Obtain permission","owner_role":"rights_editor"}]}
         result = parse_recommendation(json.dumps(value), "fact_ethics_critic", {"obs-1"})
         self.assertEqual([str(item) for item in result.objections[0].blocks_scopes], ["publication"])
+
+    def test_objection_without_real_evidence_is_not_promoted_to_a_finding(self):
+        value = {"role":"fact_ethics_critic","recommendation":"Use verified media","confidence":0.8,
+                 "evidence":["obs-1"],"risks":["rights"],"alternatives":["omit"],"objections":[{
+                    "category":"rights","severity":"high","finding":"Unsupported claim",
+                    "evidence":["invented"],"required_action":"Verify","owner_role":"rights_editor"}]}
+        result = parse_recommendation(json.dumps(value), "fact_ethics_critic", {"obs-1"})
+        self.assertEqual(result.objections, ())
 
     def test_no_objection_sentence_is_not_allowed_as_an_objection(self):
         value = {"role":"fact_ethics_critic","recommendation":"Proceed","confidence":0.8,

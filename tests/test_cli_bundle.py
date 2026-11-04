@@ -34,6 +34,28 @@ class BundleCliTests(unittest.TestCase):
             self.assertEqual(len(json.loads(listing.stdout)), 1)
             self.assertIn("บรีฟ.txt", listing.stdout)
 
+    def test_ingest_directory_registers_supported_files(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source = root / "source"
+            source.mkdir()
+            (source / "a.txt").write_text("ข้อเท็จจริง", encoding="utf-8")
+            (source / "b.txt").write_text("ข้อมูลเพิ่ม", encoding="utf-8")
+            config = root / "config.toml"
+            config.write_text(
+                'schema_version=1\n[paths]\nworkspace="' + (root / "work").as_posix() +
+                '"\n[ffmpeg]\nffprobe="D:/libs/ffmpeg/bin/ffprobe.exe"\n'
+                '[capcut]\napps_root="C:/Users/acer/AppData/Local/CapCut/Apps"\n', encoding="utf-8")
+            if not Path("D:/libs/ffmpeg/bin/ffprobe.exe").is_file():
+                self.skipTest("ffprobe unavailable")
+            result = subprocess.run([
+                sys.executable, "-m", "mtcapcut", "--config", str(config),
+                "ingest-directory", "test", str(source), "--role", "reference",
+            ], capture_output=True, text=True, encoding="utf-8", check=True)
+            records = json.loads(result.stdout)
+            self.assertEqual(len(records), 2)
+            self.assertEqual({item["kind"] for item in records}, {"text"})
+
 
 if __name__ == "__main__":
     unittest.main()

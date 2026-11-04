@@ -66,7 +66,12 @@ def _synthesis_format() -> dict:
     })
 
 
-def _timeline_format() -> dict:
+def _timeline_format(asset_ids: set[str] | None = None,
+                     evidence_ids: set[str] | None = None) -> dict:
+    asset_id_schema = ({"enum": [*sorted(asset_ids), None]} if asset_ids is not None
+                       else {"type": ["string", "null"]})
+    evidence_item_schema = ({"type": "string", "enum": sorted(evidence_ids)}
+                            if evidence_ids is not None else {"type": "string"})
     segment = {
         "type": "object", "additionalProperties": False,
         "properties": {
@@ -75,11 +80,11 @@ def _timeline_format() -> dict:
             "start_us": {"type": "integer", "minimum": 0},
             "duration_us": {"type": "integer", "minimum": 1},
             "track": {"type": "string"},
-            "asset_id": {"type": ["string", "null"]},
+            "asset_id": asset_id_schema,
             "source_start_us": {"type": "integer", "minimum": 0},
             "text": {"type": ["string", "null"]},
             "rationale": {"type": "string"},
-            "evidence": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+            "evidence": {"type": "array", "items": evidence_item_schema, "minItems": 1},
         },
         "required": ["segment_id", "kind", "start_us", "duration_us", "track", "asset_id",
                      "source_start_us", "text", "rationale", "evidence"],
@@ -210,8 +215,11 @@ class StudioRoleEngine:
                 "You are MTCapcut Lead Editor. Create a candidate Timeline Plan from validated council output. "
                 "Use only registered asset_id and exact observation_id values. The main visual track must start at "
                 "zero, be gapless and cover the entire plan. ALL times are integer microseconds: 2 seconds is "
-                "2000000, never 2 or 2.0. Source ranges must fit asset duration_us. Text must be "
-                "verbatim text supported by its cited brief/confirmed observation. Respect restrictions and never "
+                "2000000, never 2 or 2.0. Source ranges must fit asset duration_us. "
+                "The main visual total duration MUST be between project_brief.duration_min_us and "
+                "project_brief.duration_max_us. For long-form work, use evidence-backed source ranges from long "
+                "video plus multiple distinct stills; never shorten the requested runtime because the JSON is long. "
+                "Text must be verbatim text supported by its cited brief/confirmed observation. Respect restrictions and never "
                 "use filenames because none are provided. Return JSON only with autonomous_studio authorship."
             )),
             ChatMessage("user", json.dumps({
@@ -219,7 +227,8 @@ class StudioRoleEngine:
                 "director_synthesis": synthesis.to_dict(),
                 "validated_recommendations": [item.to_dict() for item in recommendations],
             }, ensure_ascii=False, sort_keys=True)),
-        ), temperature=0.1, max_tokens=4000, response_format=_timeline_format()))
+        ), temperature=0.1, max_tokens=8000,
+        response_format=_timeline_format(snapshot.asset_ids, snapshot.evidence_ids)))
         candidate_text = response.text
         for _ in range(2):
             try:
@@ -230,6 +239,7 @@ class StudioRoleEngine:
                     "You are the MTCapcut Lead Editor schema-repair step. Correct only contract/schema errors "
                     "identified by the validator. Preserve editorial meaning, evidence IDs and autonomous authorship. "
                     "All start_us, source_start_us and duration_us values are integer MICROSECONDS. "
+                    "The sum of gapless main visual durations must remain inside the project brief duration range. "
                     "For example 2 seconds is 2000000, never 2, 2.0 or 0. Duration must be positive. "
                     "Return the complete corrected JSON only."
                 )),
@@ -237,7 +247,8 @@ class StudioRoleEngine:
                     "validation_error": str(error), "required_schema": schema,
                     "invalid_response": candidate_text,
                 }, ensure_ascii=False, sort_keys=True)),
-                ), temperature=0.0, max_tokens=4000, response_format=_timeline_format()))
+                ), temperature=0.0, max_tokens=8000,
+                response_format=_timeline_format(snapshot.asset_ids, snapshot.evidence_ids)))
                 candidate_text = repaired.text
         return parse_timeline_candidate(candidate_text)
 
@@ -248,10 +259,17 @@ class StudioRoleEngine:
                           for item in segment.get("evidence", [])}
         used_assets = {segment.get("asset_id") for segment in invalid_candidate.get("segments", [])
                        if segment.get("asset_id")}
+        needs_more_coverage = "duration_out_of_range" in validation_error
+        repair_asset_ids = set(used_assets)
+        if needs_more_coverage:
+            repair_asset_ids.update(item["asset_id"] for item in snapshot.document["assets"]
+                                    if item["kind"] in {"clip", "text", "audio"})
         compact_input = {
-            "assets": [item for item in snapshot.document["assets"] if item["asset_id"] in used_assets],
+            "assets": [item for item in snapshot.document["assets"]
+                       if item["asset_id"] in repair_asset_ids],
             "observations": [item for item in snapshot.document["observations"]
-                             if item["observation_id"] in cited_evidence],
+                             if item["asset_id"] in repair_asset_ids
+                             and (needs_more_coverage or item["observation_id"] in cited_evidence)],
             "authority_rules": snapshot.document["authority_rules"],
             "project_brief": snapshot.document.get("project_brief"),
         }
@@ -262,7 +280,12 @@ class StudioRoleEngine:
                 "observation_id values in studio_input. On-screen text must be copied verbatim from the text of "
                 "its cited observation. Every project_brief.required_messages entry must appear verbatim in at "
                 "least one text segment when the validator reports required_message_missing. Text segments may "
-                "overlap visual tracks and must fit within the main visual duration. Media evidence must come "
+                "overlap visual tracks and must fit within the main visual duration. "
+                "The main visual total MUST be between project_brief.duration_min_us and "
+                "project_brief.duration_max_us; correct a short timeline by adding evidence-backed distinct "
+                "visual coverage, not by stretching or duplicating filler. When a long clip is supplied in the "
+                "repair assets, prefer one or more intentional source ranges from it before adding more stills. "
+                "Media evidence must come "
                 "from the same asset. Source ranges must fit "
                 "duration_us. Main visuals must be gapless from zero. Return the complete corrected JSON only."
             )),
@@ -270,7 +293,8 @@ class StudioRoleEngine:
                 "validation_error": validation_error, "invalid_candidate": invalid_candidate,
                 "cited_evidence_and_assets": compact_input,
             }, ensure_ascii=False, sort_keys=True)),
-        ), temperature=0.0, max_tokens=6000, response_format=_timeline_format()))
+        ), temperature=0.0, max_tokens=10000,
+        response_format=_timeline_format(snapshot.asset_ids, snapshot.evidence_ids)))
         candidate_text = response.text
         for _ in range(2):
             try:
@@ -280,14 +304,15 @@ class StudioRoleEngine:
                     ChatMessage("system", (
                         "Repair the MTCapcut Timeline Candidate JSON contract. Return one complete JSON object only. "
                         "Use integer microseconds, valid positive durations, autonomous_studio authorship, and do "
-                        "not invent asset or observation IDs."
+                        "not invent asset or observation IDs. Preserve the exact project brief duration range."
                     )),
                     ChatMessage("user", json.dumps({
                         "validation_error": str(error), "invalid_response": candidate_text,
                         "allowed_asset_ids": sorted(snapshot.asset_ids),
                         "allowed_evidence_ids": sorted(snapshot.evidence_ids),
                     }, ensure_ascii=False, sort_keys=True)),
-                ), temperature=0.0, max_tokens=4000, response_format=_timeline_format()))
+                ), temperature=0.0, max_tokens=10000,
+                response_format=_timeline_format(snapshot.asset_ids, snapshot.evidence_ids)))
                 candidate_text = repaired.text
         return parse_timeline_candidate(candidate_text)
 

@@ -78,7 +78,10 @@ class AutonomousStudioOrchestrator:
                 self.progress("lead_editor", total, total)
             raw_candidate = engine.create_timeline(snapshot, synthesis, tuple(recommendations))
             candidate = None
-            for attempt in range(3):
+            # Long-form plans can require several provider-authored semantic repairs (runtime,
+            # exact copy, source ranges) while every revision remains behind the same validators.
+            max_candidate_attempts = 6
+            for attempt in range(max_candidate_attempts):
                 try:
                     findings = tuple(item for recommendation in recommendations
                                      for item in recommendation.objections)
@@ -98,7 +101,7 @@ class AutonomousStudioOrchestrator:
                     )
                     break
                 except ValueError as error:
-                    if attempt == 2:
+                    if attempt == max_candidate_attempts - 1:
                         if isinstance(error, BriefNonComplianceError):
                             self.understanding.reject_studio_run(
                                 run_id, synthesis.to_dict(), candidate or raw_candidate, str(error),

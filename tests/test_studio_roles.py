@@ -53,6 +53,27 @@ class StudioRoleTests(unittest.TestCase):
         self.assertIsInstance(result["segments"][0]["start_us"], int)
         self.assertEqual(len(provider.requests), 2)
 
+    def test_duration_repair_receives_all_available_coverage(self):
+        valid = json.dumps({"authorship":"autonomous_studio","width":1920,"height":1080,"fps":30,
+            "segments":[{"segment_id":"s1","kind":"picture","start_us":0,"duration_us":170000000,
+                         "track":"main","asset_id":"a1","source_start_us":0,"text":None,
+                         "rationale":"proof","evidence":["o1"]}]})
+        provider = FakeProvider([valid])
+        snapshot = StudioInputSnapshot({"assets":[{"asset_id":"a1","kind":"picture"},
+                                                {"asset_id":"a2","kind":"clip"}],
+            "observations":[{"observation_id":"o1","asset_id":"a1","text":"proof"},
+                            {"observation_id":"o2","asset_id":"a2","text":"alternate"}],
+            "authority_rules":{}, "project_brief":{"duration_min_us":170000000,
+                                                       "duration_max_us":190000000}}, "hash")
+        synthesis = StudioSynthesis("direction", "premise", "effect", ("beat",), (), (), 0.5, ("risk",))
+        result = StudioRoleEngine(provider).revise_timeline(
+            snapshot, synthesis, (), {"segments":[{"asset_id":"a1","evidence":["o1"]}]},
+            "duration_out_of_range",
+        )
+        self.assertEqual(result["segments"][0]["duration_us"], 170000000)
+        payload = json.loads(provider.requests[0].messages[1].content)
+        self.assertEqual(len(payload["cited_evidence_and_assets"]["assets"]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

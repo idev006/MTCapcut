@@ -73,6 +73,15 @@ def _confidence(value: Any) -> float:
     return float(value)
 
 
+def _known_evidence(value: Any, field: str, valid_evidence_ids: set[str]) -> tuple[str, ...]:
+    """Drop hallucinated references while requiring at least one real SSOT anchor."""
+    supplied = _strings(value, field)
+    known = tuple(dict.fromkeys(item for item in supplied if item in valid_evidence_ids))
+    if not known:
+        raise ValueError(f"{field} cites no known evidence")
+    return known
+
+
 def _findings(value: Any, role: str, valid_evidence_ids: set[str]) -> tuple[EditorialFinding, ...]:
     if not isinstance(value, list):
         raise ValueError("objections must be an array")
@@ -88,9 +97,13 @@ def _findings(value: Any, role: str, valid_evidence_ids: set[str]) -> tuple[Edit
             severity = FindingSeverity(item.get("severity"))
         except ValueError as error:
             raise ValueError("objection category or severity is invalid") from error
-        evidence = _strings(item.get("evidence"), "objection evidence")
-        if not set(evidence) <= valid_evidence_ids:
-            raise ValueError("objection cites unknown evidence")
+        try:
+            evidence = _known_evidence(item.get("evidence"), "objection evidence", valid_evidence_ids)
+        except ValueError as error:
+            if "cites no known evidence" in str(error):
+                # An unsupported objection cannot become an editorial finding.
+                continue
+            raise
         scopes: tuple[ReleaseScope, ...] = ()
         if category == FindingCategory.RIGHTS:
             scopes = (ReleaseScope.PUBLICATION,)
@@ -113,9 +126,7 @@ def parse_recommendation(text: str, expected_role: str,
     recommendation = str(value.get("recommendation", "")).strip()
     if not recommendation:
         raise ValueError("recommendation is required")
-    evidence = _strings(value.get("evidence"), "evidence")
-    if not set(evidence) <= valid_evidence_ids:
-        raise ValueError("recommendation cites unknown evidence")
+    evidence = _known_evidence(value.get("evidence"), "recommendation evidence", valid_evidence_ids)
     return StudioRecommendation(
         str(uuid4()), expected_role, recommendation, _confidence(value.get("confidence")), evidence,
         _strings(value.get("risks"), "risks"), _strings(value.get("alternatives"), "alternatives"),

@@ -1,6 +1,6 @@
 """Provider-interpreted typed brief and deterministic compliance checks."""
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 import json
 import re
@@ -49,7 +49,8 @@ class ProjectBrief:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, value: dict[str, Any], valid_evidence_ids: set[str]) -> "ProjectBrief":
+    def from_dict(cls, value: dict[str, Any], valid_evidence_ids: set[str],
+                  valid_asset_roles: set[str] | None = None) -> "ProjectBrief":
         required = {
             "schema_version", "duration_min_us", "duration_max_us", "width", "height",
             "delivery_scope", "audience", "tone", "story_beats", "required_messages",
@@ -66,6 +67,9 @@ class ProjectBrief:
             arrays[field] = tuple(item.strip() for item in items)
         if not set(arrays["evidence"]) <= valid_evidence_ids:
             raise ValueError("project brief cites unknown authority evidence")
+        if valid_asset_roles is not None and not set(arrays["required_asset_roles"]) <= valid_asset_roles:
+            unknown = sorted(set(arrays["required_asset_roles"]) - valid_asset_roles)
+            raise ValueError(f"project brief uses unknown required asset roles: {unknown}")
         integer_fields = ("duration_min_us", "duration_max_us", "width", "height")
         if any(not isinstance(value[item], int) or isinstance(value[item], bool) for item in integer_fields):
             raise ValueError("project brief numeric fields must be integers")
@@ -102,31 +106,52 @@ class BriefInterpreterEngine:
         authority = [item for item in snapshot.document["observations"] if item.get("modality") == "text"]
         if not authority:
             raise ValueError("brief interpretation requires authority text observations")
-        response = self.provider.complete(ChatRequest(messages=(
-            ChatMessage("system", "You are the MTCapcut Brief Interpreter. Convert only the supplied authority observations into the strict typed contract. Times are integer microseconds. Unknown arrays stay empty. Never infer facts from asset IDs."),
-            ChatMessage("user", json.dumps({"authority_observations": authority}, ensure_ascii=False, sort_keys=True)),
-        ), temperature=0.0, max_tokens=2400, response_format=_brief_response_format()))
+        request = ChatRequest(messages=(
+            ChatMessage("system", "You are the MTCapcut Brief Interpreter. Convert only the supplied authority observations into the strict typed contract. Times are integer microseconds. required_asset_roles may contain only exact allowed asset-role tokens; image quality requirements belong in tone or story beats, never as roles. Evidence may contain only authority observation IDs. Unknown arrays stay empty. Never infer facts from asset IDs."),
+            ChatMessage("user", json.dumps({
+                "authority_observations": authority,
+                "allowed_asset_roles": sorted({item["role"] for item in snapshot.document["assets"]
+                                                if item["kind"] != "text"}),
+                "allowed_authority_evidence_ids": sorted(item["observation_id"] for item in authority),
+            }, ensure_ascii=False, sort_keys=True)),
+        ), temperature=0.0, max_tokens=4800, response_format=_brief_response_format())
+        response = self._complete(request)
         candidate_text = response.text
         for attempt in range(3):
             try:
                 value = json.loads(candidate_text)
                 if not isinstance(value, dict):
                     raise ValueError("project brief response must be an object")
-                return ProjectBrief.from_dict(value, snapshot.evidence_ids)
+                authority_ids = {item["observation_id"] for item in authority}
+                asset_roles = {item["role"] for item in snapshot.document["assets"]
+                               if item["kind"] != "text"}
+                return ProjectBrief.from_dict(value, authority_ids, asset_roles)
             except (json.JSONDecodeError, ValueError) as error:
                 if attempt == 2:
                     if isinstance(error, json.JSONDecodeError):
                         raise ValueError("project brief response is not valid JSON") from error
                     raise
-                repaired = self.provider.complete(ChatRequest(messages=(
+                repaired = self._complete(ChatRequest(messages=(
                     ChatMessage("system", "You are the MTCapcut Brief Interpreter contract-repair step. Correct only the schema or evidence-ID violation. Preserve the interpreted meaning. Evidence must use exact allowed observation IDs. Return one complete JSON object only."),
                     ChatMessage("user", json.dumps({
                         "validation_error": str(error), "invalid_response": candidate_text,
-                        "allowed_evidence_ids": sorted(snapshot.evidence_ids),
+                        "allowed_evidence_ids": sorted(item["observation_id"] for item in authority),
+                        "allowed_asset_roles": sorted({item["role"] for item in snapshot.document["assets"]
+                                                       if item["kind"] != "text"}),
                     }, ensure_ascii=False, sort_keys=True)),
-                ), temperature=0.0, max_tokens=2400, response_format=_brief_response_format()))
+                ), temperature=0.0, max_tokens=4800, response_format=_brief_response_format()))
                 candidate_text = repaired.text
         raise RuntimeError("brief interpreter repair loop ended unexpectedly")
+
+    def _complete(self, request: ChatRequest):
+        response = self.provider.complete(request)
+        if response.finish_reason == "length":
+            response = self.provider.complete(replace(request, max_tokens=max(8000, (request.max_tokens or 0) * 2)))
+        if response.finish_reason == "length":
+            raise ValueError("brief interpreter response was truncated after retry")
+        if not response.text.strip():
+            raise ValueError("brief interpreter returned empty content")
+        return response
 
 
 class BriefComplianceValidator:

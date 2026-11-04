@@ -21,6 +21,14 @@ class FakeProvider:
         return ChatResponse("test", "test-model", self.text)
 
 
+class ResetOnceProvider(FakeProvider):
+    def complete(self, request):
+        self.requests.append(request)
+        if len(self.requests) == 1:
+            raise ConnectionResetError("temporary reset")
+        return ChatResponse("test", "test-model", self.text)
+
+
 class MediaCognitionTests(unittest.TestCase):
     def test_frame_becomes_validated_structured_observations(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -36,6 +44,7 @@ class MediaCognitionTests(unittest.TestCase):
             self.assertEqual(result[0].end_us, 5_000_001)
             self.assertEqual(result[0].modality, "vision")
             content = provider.requests[0].messages[1].content
+            self.assertIn("sharpness", content[0]["text"])
             self.assertEqual(content[1]["type"], "image_url")
             self.assertTrue(content[1]["image_url"]["url"].startswith("data:image/jpeg;base64,"))
 
@@ -81,6 +90,19 @@ class MediaCognitionTests(unittest.TestCase):
                     EvidenceArtifact("frame", 0, 0, path, "hash"), asset_id="asset-1",
                 )
             self.assertEqual(provider.requests, [])
+
+    def test_transient_connection_reset_is_retried(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "frame.jpg"
+            path.write_bytes(b"fake-image")
+            provider = ResetOnceProvider(
+                '{"observations":[{"modality":"vision","text":"sharp subject","confidence":0.8}]}'
+            )
+            result = MediaCognitionEngine(provider).analyze(
+                EvidenceArtifact("frame", 0, 0, path, "hash")
+            )
+            self.assertEqual(result[0].text, "sharp subject")
+            self.assertEqual(len(provider.requests), 2)
 
 
 if __name__ == "__main__":
