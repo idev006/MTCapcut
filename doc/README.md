@@ -5,7 +5,7 @@
 ## สถานะเอกสาร
 
 - วันที่ตรวจสอบล่าสุด: 6 พฤศจิกายน 2026
-- สถานะ: Autonomous V22 export ใน CapCut 9.8 ผ่าน แต่พบ editorial defect และยังไม่ใช่ production/world-class certification; ดู [ผลวินิจฉัยหกเฟส](./37-v22-diagnosis-design-and-delivery-plan.md)
+- สถานะ: Autonomous V23 export ใน CapCut 9.8 ผ่านการตรวจทางเทคนิค แต่ยังต้อง editorial review และ blind creative review; ดู [quality cycle ล่าสุด](./39-world-class-studio-quality-cycle.md)
 - Environment หลัก: `D:\dev\MTCapcut\.venv`
 - pyCapCut: `0.0.4`
 - CapCut รุ่นที่ใช้ export V22: `9.8.0.4189`
@@ -41,6 +41,7 @@
 26. [Windows Batch Usage Guide](./26-windows-batch-usage-guide.md) — วิธีเริ่ม ตรวจระบบ และเรียก engines ด้วย batch files
 27. [V22 Pipeline Diagnosis and Delivery Plan](./37-v22-diagnosis-design-and-delivery-plan.md) — วินิจฉัย 6 เฟส, ตัวเลือก, สถาปัตยกรรม, Kanban DoD, ผลแก้และข้อจำกัด
 28. [AutoVideoMaker Research Transfer](./38-autovideomaker-transfer-study.md) — ศึกษาต้นทาง, ขอบเขตสิทธิ, word-level SSOT และ take review ที่ไม่ลบอัตโนมัติ
+29. [World-Class Studio Quality Cycle](./39-world-class-studio-quality-cycle.md) — วินิจฉัย V22, bounded sequences, visual-evidence QC, finishing handoff และ V23 retest
 
 ## ภาษาที่ใช้ในโครงการ
 

@@ -8,9 +8,11 @@ from mtcapcut.professional_finishing import ProfessionalFinishingEngine, Profess
 class FakeProvider:
     def __init__(self, response):
         self.response = response
+        self.requests = []
         self.settings = AIProviderSettings("local", "local_openai", "http://127.0.0.1:1/v1", "model", enabled=True)
 
     def complete(self, request):
+        self.requests.append(request)
         return ChatResponse("id", "model", json.dumps(self.response))
 
 
@@ -74,6 +76,73 @@ class ProfessionalFinishingTests(unittest.TestCase):
                  "creative_rationale":"restrained"}
         with self.assertRaises(ValueError):
             ProfessionalFinishingPlan.from_dict(value, candidate())
+
+    def test_finishing_receives_current_visual_evidence_and_story_direction(self):
+        value = {"schema":"mtcapcut.finishing.v1", "authorship":"autonomous_studio",
+                 "visual_finishes":[
+                     {"segment_id":"v1", "transition":"Mix", "transition_duration_us":300000,
+                      "filter":"none", "filter_intensity":0, "motion":"locked", "rationale":"clear still"},
+                     {"segment_id":"v2", "transition":"none", "transition_duration_us":0,
+                      "filter":"none", "filter_intensity":0, "motion":"locked", "rationale":"retain movement"}],
+                 "text_finishes":[{"segment_id":"t1", "intro":"none", "outro":"none",
+                                   "rationale":"readable"}], "creative_rationale":"serve the arc"}
+        edit = candidate()
+        edit["segments"][0].update({"asset_id":"photo", "evidence":["seen-photo", "other-asset"]})
+        edit["segments"][1].update({"asset_id":"clip", "evidence":["seen-clip"]})
+        evidence = {"seen-photo":{"asset_id":"photo", "modality":"vision", "text":"wide crowd photo"},
+                    "other-asset":{"asset_id":"wrong", "modality":"vision", "text":"secret wrong asset"},
+                    "seen-clip":{"asset_id":"clip", "modality":"vision", "start_us":0,
+                                 "end_us":1, "text":"moving motorcade"}}
+        provider = FakeProvider(value)
+        ProfessionalFinishingEngine(provider).design(edit, evidence_index=evidence,
+            director_synthesis={"premise":"service across communities", "audience_effect":"trust"})
+        prompt = provider.requests[0].messages[1].content
+        self.assertIn("wide crowd photo", prompt)
+        self.assertIn("moving motorcade", prompt)
+        self.assertIn("service across communities", prompt)
+        self.assertNotIn("secret wrong asset", prompt)
+
+    def test_video_finishing_excludes_visual_note_outside_selected_source_range(self):
+        edit = candidate()
+        edit["segments"][1].update({"asset_id":"clip", "source_start_us":10_000_000,
+                                     "evidence":["outside"]})
+        evidence = {"outside":{"asset_id":"clip", "modality":"vision",
+                               "start_us":1_000_000, "end_us":1_000_001,
+                               "text":"unrelated event"}}
+        value = {"schema":"mtcapcut.finishing.v1", "authorship":"autonomous_studio",
+                 "visual_finishes":[
+                    {"segment_id":"v1", "transition":"Mix", "transition_duration_us":300000,
+                     "filter":"none", "filter_intensity":0, "motion":"locked", "rationale":"still"},
+                    {"segment_id":"v2", "transition":"none", "transition_duration_us":0,
+                     "filter":"none", "filter_intensity":0, "motion":"locked", "rationale":"video"}],
+                 "text_finishes":[{"segment_id":"t1", "intro":"none", "outro":"none",
+                                   "rationale":"readable"}], "creative_rationale":"restrained"}
+        provider = FakeProvider(value)
+        ProfessionalFinishingEngine(provider).design(edit, evidence_index=evidence)
+        self.assertNotIn("unrelated event", provider.requests[0].messages[1].content)
+
+    def test_invalid_filter_intensity_repair_names_segment_and_accepts_corrected_plan(self):
+        base = {"schema":"mtcapcut.finishing.v1", "authorship":"autonomous_studio",
+                "visual_finishes":[
+                    {"segment_id":"v1", "transition":"Mix", "transition_duration_us":300000,
+                     "filter":"Soft_Grain", "filter_intensity":5, "motion":"locked", "rationale":"opening"},
+                    {"segment_id":"v2", "transition":"none", "transition_duration_us":0,
+                     "filter":"none", "filter_intensity":0, "motion":"locked", "rationale":"motion"}],
+                "text_finishes":[{"segment_id":"t1", "intro":"none", "outro":"none",
+                                  "rationale":"readable"}], "creative_rationale":"restrained"}
+
+        class RepairProvider(FakeProvider):
+            def complete(self, request):
+                self.requests.append(request)
+                result = json.loads(json.dumps(base))
+                if len(self.requests) > 1:
+                    result["visual_finishes"][0]["filter_intensity"] = 20
+                return ChatResponse("id", "model", json.dumps(result))
+
+        provider = RepairProvider(base)
+        plan = ProfessionalFinishingEngine(provider).design(candidate())
+        self.assertEqual(plan.visual_finishes[0].filter_intensity, 20)
+        self.assertIn("segment v1", provider.requests[1].messages[1].content)
 
 
 if __name__ == "__main__":

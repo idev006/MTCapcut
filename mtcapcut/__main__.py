@@ -293,6 +293,11 @@ def main() -> None:
             if config.ai.studio_model:
                 settings = replace(settings, model=config.ai.studio_model)
             finishing_engine = ProfessionalFinishingEngine(create_provider(settings))
+            evidence_index = {}
+            for asset_id in {item.get("asset_id") for item in candidate["segments"] if item.get("asset_id")}:
+                evidence_index.update({item["observation_id"]: {**item, "asset_id": asset_id}
+                                       for item in understanding.current_asset_timeline(asset_id)})
+            director_synthesis = understanding.get_studio_run(candidate["studio_run_id"])["synthesis"]
             visual_count = sum(item["kind"] in {"picture", "video"} for item in candidate["segments"])
             if visual_count > 12:
                 chunks = []
@@ -302,7 +307,9 @@ def main() -> None:
                               if offset <= item["start_us"] < offset + 30_000_000
                               and item["kind"] in {"picture", "video"}]}
                     if scoped["segments"]:
-                        chunks.append(finishing_engine.design(scoped))
+                        chunks.append(finishing_engine.design(
+                            scoped, evidence_index=evidence_index,
+                            director_synthesis=director_synthesis))
                 finishing = ProfessionalFinishingPlan(
                     "mtcapcut.finishing.v1", "autonomous_studio",
                     tuple(item for chunk in chunks for item in chunk.visual_finishes),
@@ -312,7 +319,9 @@ def main() -> None:
                     " | ".join(chunk.creative_rationale for chunk in chunks),
                 )
             else:
-                finishing = finishing_engine.design(candidate)
+                finishing = finishing_engine.design(
+                    candidate, evidence_index=evidence_index,
+                    director_synthesis=director_synthesis)
             manifest = args.finishing_manifest.resolve()
             if manifest.exists():
                 raise FileExistsError(manifest)

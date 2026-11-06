@@ -4,7 +4,7 @@
 แหล่งสถานะงาน: [Kanban Backlog](./14-initial-kanban-backlog.md)  
 แผนระยะ: [Development Roadmap](./18-development-roadmap.md)
 
-ผลทดสอบล่าสุด: [ร่าง autonomous 3 นาทีและ CapCut export V22](./36-three-minute-autonomous-retest.md); [ผลวินิจฉัยและแผนหกเฟส](./37-v22-diagnosis-design-and-delivery-plan.md). V22 export ได้จริง แต่พบ title ผิดเจตนาและความเสี่ยงด้าน handoff/QA; แก้ engine แล้วโดยยังไม่ re-run สร้างคลิปใหม่ คุณภาพระดับ world-class ยังไม่ผ่าน blind review.
+ผลทดสอบล่าสุด: [V23 quality cycle และ CapCut export](./39-world-class-studio-quality-cycle.md). OpenRouter สร้าง candidate ใหม่, pyCapCut สร้าง draft, CapCut 9.8 export 180 วินาทีผ่าน; ระบบระบุว่าหลักฐานภาพวิดีโอเป็น sampled-only ทุกช็อต คุณภาพระดับ world-class ยังไม่ผ่าน blind review.
 
 ## ภาพรวมที่ตรวจได้
 
@@ -39,7 +39,7 @@
 | Gate | สถานะ | Evidence |
 |---|---|---|
 | Python 3.14 environment | PASS | `.venv/Scripts/python.exe`; doctor report |
-| Foundation automated tests | PASS | `python -m unittest discover -s tests -p 'test_*.py' -q`: 135 tests, 0 failures (6 November 2026) |
+| Foundation automated tests | PASS | `python -m unittest discover -s tests -p 'test_*.py' -q`: 143 tests, 0 failures (6 November 2026) |
 | FFmpeg/ffprobe local operation | PASS | synthetic audio/video/image generation, probe และ evidence extraction |
 | Asset Map slice | PASS | version invalidation/history, bundle rollback, artifact provenance tests |
 | Timeline validation | PASS | multitrack/overlap/path tests |
@@ -61,6 +61,7 @@
 | Media Readiness | INTENDED VISUAL SET READY / GLOBAL BLOCKED | OpenRouter added observations for 23 missing proxy shots and 4 official photos; intended proxy now 24/24 shots and photos 5/5, while unused assets and full-song coverage remain incomplete |
 | Autonomous private preview v7 | PASS | run `42dca66f-0e51-43db-bb95-e33767e3f7c2`; candidate-ready, brief PASS, 35s H.264/AAC 1080p; publication requires the responsible person's decision |
 | Autonomous 3-minute V22 | LOCAL EXPORT PASS / EDITORIAL DEFECT FOUND | run `4deaab5f-05f4-4580-81ff-46bb4b63381e`; 180s, 24 distinct stills, 8 video shots, 0.1s source overlap, brief PASS; CapCut 9.8 exported H.264/AAC 1080p to `workspace/road-report-001/exports/road-report-001-studio-v22.mp4`; title เรื่องเพลงผิดเจตนา แก้ engine แล้วแต่ยังไม่ re-run |
+| Autonomous 3-minute V23 | LOCAL EXPORT PASS / CREATIVE REVIEW REQUIRED | run `1ebee223-2db7-4d98-9395-e1e9322a080d`; 180s, 31 stills, 6 video shots, brief PASS, title ถูกตามบรีฟ; finishing ผ่าน OpenRouter/pyCapCut; CapCut 9.8 export H.264/AAC 1080p ไป `workspace/road-report-001/exports/road-report-001-studio-v23.mp4`; video ทั้ง 6 sampled-only |
 | pyCapCut professional finishing | DRAFT OPEN / RESOURCE COMPATIBILITY PARTIAL | OpenRouter finishing manifest → Swipe Left 0.8s, filters 20–30%, slow push-in, text wipe; draft opens and plays in CapCut 9.7, while downloadable filter/text-animation resources need a local-safe fallback profile |
 
 ## ความเสี่ยง/การตัดสินใจที่รอ

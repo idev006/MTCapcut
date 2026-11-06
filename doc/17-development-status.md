@@ -1,7 +1,7 @@
 # Development Status
 
 วันที่: 6 พฤศจิกายน 2026
-สถานะ: Foundation และ CapCut compatibility slice ทำงานได้; autonomous V22 export จาก CapCut 9.8 ได้ แต่มีข้อบกพร่องเชิงบรรณาธิการและยังไม่ผ่านการประเมินคุณภาพสร้างสรรค์ ดู [ผลทดสอบ 3 นาที](./36-three-minute-autonomous-retest.md) และ [วินิจฉัยหกเฟส](./37-v22-diagnosis-design-and-delivery-plan.md)
+สถานะ: Foundation และ CapCut compatibility slice ทำงานได้; autonomous V23 export จาก CapCut 9.8 ได้และแก้ title ผิดเจตนาของ V22 แล้ว แต่ยังไม่ผ่านการประเมินคุณภาพสร้างสรรค์ ดู [quality cycle](./39-world-class-studio-quality-cycle.md)
 
 ## ใช้งานได้แล้ว
 
@@ -20,6 +20,7 @@
 - AI provider baseline ใช้ contract เดียวกับ OpenRouter และ local OpenAI-compatible server โดย secret อ่านจาก environment
 - Media Cognition Engine รับ frame/audio evidence จาก Eye/Ear engine, ส่งผ่าน AI provider, ตรวจ structured observations และเขียนผลแบบ `machine_proposed` ลง Asset Understanding Map; bounded live smoke ผ่านกับภาพนิ่ง เฟรมวิดีโอที่ timestamp 8 วินาที และเสียงช่วง 30–45 วินาที โดยยังไม่ถือว่าความหมายถูกต้องจนกว่าจะผ่าน ground-truth review
 - AutoVideoMaker-inspired take review: local faster-whisper เก็บเวลาแต่ละคำลง SSOT (`speech_word`), ตรวจช่องว่าง/คำติดกันที่ซ้ำเป็นข้อเสนอพร้อม evidence IDs; `transcribe-asset` และ `review-takes` CLI ทำงานได้ โดยยังไม่ตัดไฟล์หรือ timeline และยังไม่มี benchmark เสียงพูดไทยจริง ดู [doc/38](./38-autovideomaker-transfer-study.md)
+- World-class quality cycle slice: bounded SequenceJob สำหรับ 20+ นาที, visual-evidence coverage report ใน candidate, OpenRouter finishing รับ visual notes จาก SSOT และ premise/audience effect; V23 export ผ่านแต่ sampled-only ทั้ง 6 วิดีโอ จึงยังต้อง editorial review
 - External AI Data Policy Gate บังคับ central switch, per-asset classification/approval, payload ceiling และ append-only revoke history ก่อนอ่าน evidence เป็น base64/ก่อน transport; CLI `set-ai-policy` และ `show-ai-policy` รองรับ audit workflow
 - Windows launch มี requirements direct/lock และ `start`/doctor/CLI/test batch wrappers; ยังไม่มี installer หรือ release ZIP
 - pyCapCut adapter ตรึง `pycapcut==0.0.4`, เขียนเฉพาะ sandbox ที่มี marker, ไม่ overwrite draft และสร้าง video/picture/audio/text tracks
@@ -30,7 +31,7 @@
 
 ## หลักฐานทดสอบล่าสุด
 
-- Automated tests: `135 tests, 0 failures` (6 November 2026; full suite after AutoVideoMaker-inspired take-review slice)
+- Automated tests: `143 tests, 0 failures` (6 November 2026; full suite after V23 quality-cycle slice and source-range evidence fix)
 - Windows batch: `doctor.bat` และ `run-tests.bat` ผ่าน; `start.bat` เป็นเมนูเรียก engines โดยไม่ติดตั้งหรือแก้ environment
 - Editorial persistence/change planning: `11 tests, 0 failures` ครอบคลุม immutability, retry idempotency, rollback, metadata/payload tamper detection, backup/reopen, provenance requirements, no-op rejection และ scope นาที 12–13
 - `doctor`: PASS บน Python 3.14.0, pyCapCut 0.0.4, FFmpeg/ffprobe build `2025-10-30`, CapCut 9.6 และ 9.7 ถูกค้นพบ

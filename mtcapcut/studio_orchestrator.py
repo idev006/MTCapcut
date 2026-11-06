@@ -17,7 +17,7 @@ from .editorial_findings import compute_release_gates
 from .project_brief import BriefComplianceValidator, BriefInterpreterEngine
 from .studio_contracts import STUDIO_ROLES, StudioRecommendation
 from .studio_roles import PROMPT_VERSION, StudioRoleEngine
-from .studio_quality import validate_longform_diversity
+from .studio_quality import validate_longform_diversity, visual_evidence_report
 from .studio_snapshot import authorize_studio_snapshot, build_studio_snapshot
 from .timeline import Segment, TimelinePlan, validate_plan
 
@@ -99,6 +99,11 @@ class AutonomousStudioOrchestrator:
                                      for item in recommendation.objections)
                     candidate = self._validated_candidate(raw_candidate, snapshot.evidence_ids,
                                                           findings, brief.delivery_scope, run_id)
+                    candidate["visual_evidence_qc"] = visual_evidence_report(
+                        candidate, snapshot.document["observations"])
+                    candidate["gates"]["editorial_review_required"] = (
+                        candidate["visual_evidence_qc"]["sampled_only_shot_count"] > 0
+                        or candidate["visual_evidence_qc"]["unknown_shot_count"] > 0)
                     if brief.duration_min_us >= 90_000_000:
                         candidate["editorial_qc"] = validate_longform_diversity(candidate)
                     asset_catalog = {item["asset_id"]: self.understanding.get_asset(item["asset_id"])
@@ -207,7 +212,7 @@ class AutonomousStudioOrchestrator:
                 )
                 if not matching:
                     raise ValueError("timeline media source range has no machine observation")
-                if not any(observation_index[item]["asset_id"] == asset_id for item in cited):
+                if not any(item in matching for item in cited):
                     auto_attached = matching
                     cited = tuple(dict.fromkeys((*cited, *matching)))
                 asset = self.understanding.get_asset(asset_id)

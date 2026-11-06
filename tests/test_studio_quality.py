@@ -1,6 +1,7 @@
 import unittest
 
-from mtcapcut.studio_quality import longform_diversity_report, validate_longform_diversity
+from mtcapcut.studio_quality import (longform_diversity_report,
+                                     validate_longform_diversity, visual_evidence_report)
 
 
 class StudioQualityTests(unittest.TestCase):
@@ -34,6 +35,29 @@ class StudioQualityTests(unittest.TestCase):
         report = validate_longform_diversity(candidate)
         self.assertEqual(report["reused_video_source_us"], 100_000)
         self.assertEqual(report["unique_picture_assets"], 1)
+
+    def test_one_sampled_frame_is_not_counted_as_a_five_second_observed_shot(self):
+        candidate = {"segments": [{"segment_id":"s1", "kind":"video", "asset_id":"v",
+                                   "source_start_us":0, "duration_us":5_000_000}]}
+        observations = [{"asset_id":"v", "modality":"vision", "start_us":1_000_000,
+                         "end_us":1_000_001, "observation_id":"frame"},
+                        {"asset_id":"v", "modality":"speech", "start_us":0,
+                         "end_us":5_000_000, "observation_id":"audio"}]
+        report = visual_evidence_report(candidate, observations)
+        self.assertEqual(report["observed_video_source_us"], 1)
+        self.assertEqual(report["shots"][0]["status"], "sampled_only")
+        self.assertEqual(report["sampled_only_shot_count"], 1)
+
+    def test_overlapping_visual_observations_are_not_double_counted(self):
+        candidate = {"segments": [{"segment_id":"s1", "kind":"video", "asset_id":"v",
+                                   "source_start_us":0, "duration_us":5_000_000}]}
+        observations = [{"asset_id":"v", "modality":"vision", "start_us":0,
+                         "end_us":3_000_000},
+                        {"asset_id":"v", "modality":"ocr", "start_us":2_000_000,
+                         "end_us":5_000_000}]
+        report = visual_evidence_report(candidate, observations)
+        self.assertEqual(report["observed_video_source_us"], 5_000_000)
+        self.assertEqual(report["shots"][0]["status"], "observed_interval")
 
 
 if __name__ == "__main__":

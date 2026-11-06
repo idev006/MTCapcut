@@ -32,6 +32,19 @@ Execution SSOT: เอกสารนี้; `08-foundation-implementation-plan.
 | TAK-103 | P1 / Ready | ตรวจ word gap เทียบ acoustic silence, ambience/music และ multi-speaker; ทดสอบ false positives |
 | TAK-104 | P2 / Options | ชุดคลิปพูดไทยมี label; วัด false-removal seconds, recall, processing time และ cost |
 
+## World-class studio quality cards — 6 พฤศจิกายน 2026
+
+รายละเอียดและผล V23 อยู่ใน [quality cycle](./39-world-class-studio-quality-cycle.md)
+
+| ID | Priority / board state | Acceptance |
+|---|---|---|
+| WCS-101 | P1 / Validate | bounded sequence job <=30 s, 20 นาทีได้ >=40 stable IDs, exact runtime |
+| WCS-102 | P0 / Validate | final candidate มี visual-evidence QC แยก sampled-only จาก observed interval; V23 flagged 6/6 video shots |
+| WCS-103 | P1 / Validate | finishing ได้ current visual notes และ director story context; V23 draft/export ผ่าน |
+| WCS-104 | P1 / Ready | durable AI stage checkpoints, usage/cost ledger และ resume หลัง failure |
+| WCS-105 | P1 / Ready | shot-level visual/event audit, identity claim review และผู้ตรวจทักท้วง |
+| WCS-106 | P2 / Options | blind human benchmark หลาย genre พร้อมเกณฑ์ประกาศก่อนทดสอบ |
+
 ## Development snapshot — 2 พฤศจิกายน 2026
 
 foundation slice เดินถึง validation แล้ว: `ENG-002` doctor ผ่านบนเครื่องจริง; `ENG-005/006` มี bundle ingest, immutable AssetVersion, current/history queries และ artifact provenance; `ENG-007` มี persisted revision/receipt และ localized change planning; `CMP-001` subset create/open/export ผ่าน CapCut 9.7.0.4153 ด้วย fixture สังเคราะห์ รายละเอียดอยู่ใน [Development Status](./17-development-status.md) และ [Compatibility Report](./21-capcut-compatibility-report.md) Acceptance เต็มของ config, rights, correction workflow, automatic edit application และ compatibility matrix ยังไม่ครบ จึงไม่เหมารวม milestone ว่า Done

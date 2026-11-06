@@ -7,6 +7,7 @@ from .ai_provider import ChatMessage, ChatRequest, OpenAICompatibleProvider
 from .studio_contracts import (STUDIO_ROLES, StudioRecommendation, StudioSynthesis,
                                parse_recommendation, parse_synthesis, parse_timeline_candidate)
 from .studio_snapshot import StudioInputSnapshot
+from .sequence_planner import plan_sequence_jobs
 
 
 ROLE_MISSIONS = {
@@ -264,10 +265,8 @@ class StudioRoleEngine:
         """Ask the provider to edit bounded sequences; combine only validated local timings."""
         brief = snapshot.document["project_brief"]
         target = (brief["duration_min_us"] + brief["duration_max_us"]) // 2
-        beats = brief["story_beats"]
-        count = min(max(3, len(beats)), 8)
-        lengths = [target // count] * count
-        lengths[-1] += target - sum(lengths)
+        jobs = plan_sequence_jobs(target, brief["story_beats"] or synthesis.story_beats)
+        count = len(jobs)
         assets = [item for item in snapshot.document["assets"] if item["kind"] in {"picture", "clip"}]
         evidence_by_asset = {}
         for item in snapshot.document["observations"]:
@@ -296,14 +295,14 @@ class StudioRoleEngine:
                             "required_action": objection.required_action}
                            for objection in item.objections],
         } for item in recommendations if item.recommendation_id in accepted_ids]
-        offset = 0
         output = []
         used_ids = []
         used_picture_ids = set()
         used_video_ranges = set()
-        for index, length in enumerate(lengths):
-            beat = beats[index % len(beats)] if beats else synthesis.story_beats[index % len(synthesis.story_beats)]
-            request_input = {"beat": beat, "sequence_index": index + 1, "sequence_count": count,
+        for job in jobs:
+            beat, length = job.story_beat, job.duration_us
+            request_input = {"beat": beat, "sequence_id": job.sequence_id,
+                "sequence_index": job.index, "sequence_count": count,
                 "duration_us": length, "creative_direction": synthesis.creative_direction,
                 "premise": synthesis.premise, "audience_effect": synthesis.audience_effect,
                 "editorial_handoff": editorial_handoff,
@@ -373,8 +372,8 @@ class StudioRoleEngine:
                     if cursor != length:
                         raise ValueError(f"sequence duration {cursor} must equal {length}")
                     for item in visuals:
-                        output.append({**item, "segment_id": f"seq{index + 1}-{item['segment_id']}",
-                                       "start_us": item["start_us"] + offset})
+                        output.append({**item, "segment_id": f"{job.sequence_id}-{item['segment_id']}",
+                                       "start_us": item["start_us"] + job.start_us})
                         used_ids.append(item["asset_id"])
                     used_picture_ids.update(chunk_picture_ids)
                     used_video_ranges.update(chunk_video_ranges)
@@ -385,7 +384,6 @@ class StudioRoleEngine:
                         invalid_sequence = chunk
                     if attempt == 4:
                         raise
-            offset += length
         # Music and required copy are user locks; deterministic placement is materialization,
         # while the provider owns the entire visual edit above.
         authority = [item for item in snapshot.document["observations"] if item["modality"] == "text"]
