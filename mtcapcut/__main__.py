@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import sys
+from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 from .assets import InputAsset, inspect_asset, inspect_bundle
@@ -23,6 +24,9 @@ from .professional_finishing import ProfessionalFinishingEngine, ProfessionalFin
 from .data_policy import DataPolicyGate
 from .media_cognition import MediaCognitionEngine
 from .perception import EvidenceArtifact, hash_file
+from .perception import extract_audio
+from .local_ear import FasterWhisperEar
+from .take_review import suggest_for_asset
 
 
 def main() -> None:
@@ -53,6 +57,12 @@ def main() -> None:
     timeline = commands.add_parser("timeline", help="Show observations for one asset")
     timeline.add_argument("project_id")
     timeline.add_argument("asset_id")
+    transcribe = commands.add_parser("transcribe-asset", help="Store local word-level ASR for one audio or clip asset")
+    transcribe.add_argument("project_id")
+    transcribe.add_argument("asset_id")
+    take_review = commands.add_parser("review-takes", help="Suggest review-only pause/repetition ranges from SSOT words")
+    take_review.add_argument("project_id")
+    take_review.add_argument("asset_id")
     shots = commands.add_parser("analyze-shots", help="Detect shot candidates and register sampled frames")
     shots.add_argument("project_id")
     shots.add_argument("asset_id")
@@ -156,6 +166,48 @@ def main() -> None:
             print(json.dumps(understanding.list_assets(), ensure_ascii=False, indent=2))
         elif args.command == "timeline":
             print(json.dumps(understanding.current_asset_timeline(args.asset_id), ensure_ascii=False, indent=2))
+        elif args.command == "transcribe-asset":
+            asset = understanding.get_asset(args.asset_id)
+            if asset["kind"] not in {"audio", "clip"}:
+                raise ValueError("transcribe-asset requires an audio or clip asset")
+            if not config.local_ear.enabled:
+                raise ValueError("local_ear.enabled must be true in central config")
+            ear = FasterWhisperEar(config.local_ear)
+            existing = [item for item in understanding.current_asset_timeline(args.asset_id)
+                        if item["modality"] == "speech_word"]
+            producer = ear.producer
+            if existing and any(item["producer"] != producer for item in existing):
+                raise ValueError("current asset has word evidence from another model; review before re-transcription")
+            if existing:
+                result = {"asset_id": args.asset_id, "status": "cache_hit",
+                          "word_observation_count": len(existing)}
+            else:
+                raw_duration = asset["technical"].get("format", {}).get("duration")
+                try:
+                    duration_us = round(float(raw_duration) * 1_000_000)
+                except (TypeError, ValueError) as error:
+                    raise ValueError("asset duration is required for word-level transcription") from error
+                if duration_us <= 0:
+                    raise ValueError("asset duration must be positive")
+                with TemporaryDirectory(prefix="mtcapcut-asr-") as folder:
+                    artifact = extract_audio(config.ffmpeg, Path(asset["path"]),
+                                             Path(folder) / "speech.wav", end_us=duration_us)
+                    ids = ear.transcribe_and_store(understanding, args.asset_id, artifact)
+                result = {"asset_id": args.asset_id, "status": "analyzed",
+                          "observation_count": len(ids),
+                          "word_observation_count": sum(item["modality"] == "speech_word"
+                              for item in understanding.current_asset_timeline(args.asset_id))}
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        elif args.command == "review-takes":
+            understanding.get_asset(args.asset_id)
+            observations = understanding.current_asset_timeline(args.asset_id)
+            suggestions = suggest_for_asset(understanding, args.asset_id)
+            word_count = sum(item["modality"] == "speech_word" for item in observations)
+            print(json.dumps({"asset_id": args.asset_id,
+                "status": "review_ready" if word_count else "no_word_transcript",
+                "word_observation_count": word_count,
+                "review_required": True, "suggestions": [asdict(item) for item in suggestions]},
+                ensure_ascii=False, indent=2))
         elif args.command == "analyze-shots":
             result = ShotMapService(
                 config, understanding, config.workspace / args.project_id,

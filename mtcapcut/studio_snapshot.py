@@ -55,7 +55,10 @@ def build_studio_snapshot(understanding: UnderstandingMap,
             "content_hash": asset["content_hash"], "duration_us": _duration_us(technical),
             "width": video.get("width"), "height": video.get("height"),
         })
-        observations.extend({**item, "asset_id": asset["asset_id"]} for item in current)
+        # Word-level ASR belongs in the local SSOT for take review. The Studio
+        # Council receives concise segment observations rather than every token.
+        observations.extend({**item, "asset_id": asset["asset_id"]} for item in current
+                            if item["modality"] != "speech_word")
     if authority_asset_ids is not None:
         included = {item["asset_id"] for item in assets}
         missing = authority_asset_ids - included

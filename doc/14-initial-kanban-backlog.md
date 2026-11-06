@@ -21,6 +21,17 @@ Execution SSOT: เอกสารนี้; `08-foundation-implementation-plan.
 
 สถานะ Validate หมายถึง implementation/focused tests ผ่าน แต่ยังไม่ปิด card จน acceptance ตามงานจริงครบ
 
+## Take-review cards — 6 พฤศจิกายน 2026
+
+อ้างอิง [AutoVideoMaker research transfer](./38-autovideomaker-transfer-study.md); PR #1 เป็นจุดเริ่มการศึกษาและโค้ด review-only โดยพัฒนาต่อใน `main`
+
+| ID | Priority / board state | งานและ acceptance |
+|---|---|---|
+| TAK-101 | P1 / Validate | faster-whisper เก็บ word timestamps/probability เป็น observations ของ asset version ปัจจุบัน; pure take rules คืน timecode/evidence IDs; 135 tests ผ่าน |
+| TAK-102 | P1 / Ready | เพิ่ม review/approval + receipt ก่อน apply cut; ปฏิเสธการตัดเมื่อ evidence เปลี่ยน version |
+| TAK-103 | P1 / Ready | ตรวจ word gap เทียบ acoustic silence, ambience/music และ multi-speaker; ทดสอบ false positives |
+| TAK-104 | P2 / Options | ชุดคลิปพูดไทยมี label; วัด false-removal seconds, recall, processing time และ cost |
+
 ## Development snapshot — 2 พฤศจิกายน 2026
 
 foundation slice เดินถึง validation แล้ว: `ENG-002` doctor ผ่านบนเครื่องจริง; `ENG-005/006` มี bundle ingest, immutable AssetVersion, current/history queries และ artifact provenance; `ENG-007` มี persisted revision/receipt และ localized change planning; `CMP-001` subset create/open/export ผ่าน CapCut 9.7.0.4153 ด้วย fixture สังเคราะห์ รายละเอียดอยู่ใน [Development Status](./17-development-status.md) และ [Compatibility Report](./21-capcut-compatibility-report.md) Acceptance เต็มของ config, rights, correction workflow, automatic edit application และ compatibility matrix ยังไม่ครบ จึงไม่เหมารวม milestone ว่า Done

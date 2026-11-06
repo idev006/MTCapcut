@@ -77,6 +77,22 @@ class StudioSnapshotTests(unittest.TestCase):
                 with self.assertRaisesRegex(PermissionError, "size limit"):
                     authorize_studio_snapshot(DataPolicyGate(config, mapping), remote, snapshot)
 
+    def test_word_level_transcript_stays_local_to_avoid_large_studio_prompt(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            with UnderstandingMap(root / "map.sqlite3") as mapping:
+                mapping.add_asset({"asset_id":"a", "path":str(root / "a.wav"), "kind":"audio",
+                    "role":"speech", "source":"user", "rights_status":"owned",
+                    "content_hash":"h", "size_bytes":1, "technical":{}})
+                mapping.add_observations("a", [
+                    {"modality":"speech", "text":"hello", "start_us":0, "end_us":1_000_000,
+                     "producer":"ear", "producer_version":"1"},
+                    {"modality":"speech_word", "text":"hello", "start_us":0, "end_us":500_000,
+                     "producer":"ear", "producer_version":"1"},
+                ])
+                snapshot = build_studio_snapshot(mapping)
+                self.assertEqual([row["modality"] for row in snapshot.document["observations"]], ["speech"])
+
 
 if __name__ == "__main__":
     unittest.main()

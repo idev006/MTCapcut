@@ -4,7 +4,7 @@
 
 ## สถานะเอกสาร
 
-- วันที่ตรวจสอบล่าสุด: 4 พฤศจิกายน 2026
+- วันที่ตรวจสอบล่าสุด: 6 พฤศจิกายน 2026
 - สถานะ: Autonomous V22 export ใน CapCut 9.8 ผ่าน แต่พบ editorial defect และยังไม่ใช่ production/world-class certification; ดู [ผลวินิจฉัยหกเฟส](./37-v22-diagnosis-design-and-delivery-plan.md)
 - Environment หลัก: `D:\dev\MTCapcut\.venv`
 - pyCapCut: `0.0.4`
@@ -40,6 +40,7 @@
 25. [Deployment, UI Bridge and AI Provider Architecture](./25-deployment-ui-bridge-ai-provider-architecture.md) — non-blocking engine contract, provider adapters, batch launch และ config categories
 26. [Windows Batch Usage Guide](./26-windows-batch-usage-guide.md) — วิธีเริ่ม ตรวจระบบ และเรียก engines ด้วย batch files
 27. [V22 Pipeline Diagnosis and Delivery Plan](./37-v22-diagnosis-design-and-delivery-plan.md) — วินิจฉัย 6 เฟส, ตัวเลือก, สถาปัตยกรรม, Kanban DoD, ผลแก้และข้อจำกัด
+28. [AutoVideoMaker Research Transfer](./38-autovideomaker-transfer-study.md) — ศึกษาต้นทาง, ขอบเขตสิทธิ, word-level SSOT และ take review ที่ไม่ลบอัตโนมัติ
 
 ## ภาษาที่ใช้ในโครงการ
 

@@ -1,6 +1,6 @@
 # MTCapcut Progress Dashboard
 
-อัปเดตล่าสุด: 4 พฤศจิกายน 2026
+อัปเดตล่าสุด: 6 พฤศจิกายน 2026
 แหล่งสถานะงาน: [Kanban Backlog](./14-initial-kanban-backlog.md)  
 แผนระยะ: [Development Roadmap](./18-development-roadmap.md)
 
@@ -15,6 +15,7 @@
 | Asset bundle intake | Implemented slice | atomic asset registration, roles, hash, ffprobe, CLI tests | command-level observation transaction, rights manifest, per-file error UX |
 | Asset Understanding Map | Implemented slice | immutable versions, current/history queries, claims/reviews/artifacts | correction API, snapshots, concurrency |
 | ตา/หูเชิงกล | Implemented shot-map slice | 24 shot candidates + 72 sampled frames จากคลิปจริง, cache hit รอบซ้ำ; local/cloud ear smoke | OCR, semantic batch analysis และ annotated benchmark |
+| Take review จากคำพูด | Implemented review-only slice | faster-whisper word timestamps → SSOT → pause/repetition suggestions พร้อม evidence IDs; 135 tests ผ่าน | acoustic cross-check, review/approval receipts, benchmark ไทยจริง |
 | สมอง: intent/story/edit decisions | Typed-brief/revision slice PASS; live rerun BLOCKED | strict ProjectBrief + deterministic compliance; 45s→32s engine revision test; legacy 45s candidate render denied | bulk cognition readiness, provider typed objections/copy engine, autonomous rerun และ blind review |
 | Timeline Plan/validator | Implemented slice | provider-neutral model และ validation tests | transitions/captions/loudness/approval gates |
 | Direct review render | Implemented preview slice | Timeline Plan → H.264/AAC MP4, still motion, Thai titles, watermark และ loudness normalization | transitions, render receipts in SSOT และ UI progress/cancel |
@@ -38,7 +39,7 @@
 | Gate | สถานะ | Evidence |
 |---|---|---|
 | Python 3.14 environment | PASS | `.venv/Scripts/python.exe`; doctor report |
-| Foundation automated tests | PASS | `python -m unittest discover -s tests -p 'test_*.py' -q`: 125 tests, 0 failures (4 November 2026) |
+| Foundation automated tests | PASS | `python -m unittest discover -s tests -p 'test_*.py' -q`: 135 tests, 0 failures (6 November 2026) |
 | FFmpeg/ffprobe local operation | PASS | synthetic audio/video/image generation, probe และ evidence extraction |
 | Asset Map slice | PASS | version invalidation/history, bundle rollback, artifact provenance tests |
 | Timeline validation | PASS | multitrack/overlap/path tests |
